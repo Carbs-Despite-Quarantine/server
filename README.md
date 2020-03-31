@@ -1,6 +1,6 @@
-# CAH Server
+# CAH Client
 
-Play Cards Agaainst Humanity over the internet! This is dedicated server software for an experimental online CAH-like game. It is best used in conjunction with the official client implementation which you can find on GitHub at [raphydaphy/cah-client](https://github.com/raphydaphy/cah-client).
+Play Cards Against Humanity over the internet! This is dedicated server software for an experimental online CAH-like game. It is best used in conjunction with the official client implementation which you can find on GitHub at [raphydaphy/cah-client](https://github.com/raphydaphy/cah-client).
 
 ## Licence
 
