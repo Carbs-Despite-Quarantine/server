@@ -87,6 +87,18 @@ socket.on("userJoined", data => {
   if (data.message) addMessage(data.message);
 });
 
+socket.on("userLeft", data => {
+  if (!users.hasOwnProperty(data.userId)) {
+    return console.error("Recieved leave message for unknown user #" + data.userId);
+  }
+  if (data.message) addMessage(data.message);
+  users[data.userId].roomId = null;
+})
+
+window.addEventListener("beforeunload", (event) => {
+  socket.emit("userLeft");
+});
+
 /**************
  * Room Setup *
  **************/

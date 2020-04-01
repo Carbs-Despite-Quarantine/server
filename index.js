@@ -210,7 +210,6 @@ io.on("connection", (socket) => {
     user.name = data.userName;
 
     var message = createMessage(userId, "joined the room", true);
-    console.debug(message);
     fn({message: message});
 
     room.users.forEach(roomUserId => {
@@ -227,6 +226,54 @@ io.on("connection", (socket) => {
         });
       }
     });
+  });
+
+  socket.on("userLeft", (data) => {
+    if (!users.hasOwnProperty(userId)) return;
+    var user = users[userId];
+    if (!user.roomId || !rooms.hasOwnProperty(user.roomId)) return;
+
+    var room = rooms[user.roomId];
+    var activeUsers = 0;
+
+    // If the user never entered the room, don't inform users of leave
+    if (!user.name) {
+      // We have to do this twice to prevent users who haven't entered leaving the room open indefinitely
+      room.users.forEach(roomUserId => {
+        if (roomUserId != userId && users[roomUserId].roomId == room.id) activeUsers++;
+      });
+      if (activeUsers == 0) {
+        console.log("Deleting room #" + room.id + " because all users have left");
+        delete rooms[room.id];
+      }
+
+      // If we aren't returning here, we still need the roomId for createMessage()
+      user.roomId = null;
+      return;
+    }
+
+    var message = createMessage(userId, "left the room", true);
+
+    room.users.forEach(roomUserId => {
+      var roomUser = users[roomUserId];
+
+      // Notify active users that the user left
+      if (roomUserId != userId && roomUser.roomId == room.id) {
+        activeUsers++;
+        roomUser.socket.emit("userLeft", {
+          userId: userId,
+          message: message
+        });
+      }
+    });
+
+    // Delete the room once all users have left
+    if (activeUsers == 0) {
+      console.log("Deleting room #" + room.id + " because all users have left");
+      delete rooms[room.id];
+    }
+
+    user.roomId = null;
   });
 });
 
