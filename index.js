@@ -18,6 +18,12 @@ var users = {}
  * Room:
  *  - id (hash)
  *  - users (hash[])
+ *  - messages:
+ *     - id (hash)
+ *     - userId (hash)
+ *     - content (string)
+ *     - isSystemMsg (bool)
+ *     - timestamp (int)
  **/
 var rooms = {}
 
@@ -72,6 +78,37 @@ app.get("/status", (req, res) => {
   res.end("OK");
 });
 
+/***************
+ * Chat System *
+ ***************/
+
+function createMessage(userId, content, isSystemMsg) {
+  if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
+  var user = users[userId];
+  if (!user.roomId || user.roomId == 0) return {error: "Not in a room"};
+  if (!validateString(content)) return {error: "Invalid Message"};
+  
+  // Cache the room object
+  var room = rooms[user.roomId];
+
+  // Generate an ID for the message
+  var messageId = hash64();
+  while (room.messages.hasOwnProperty(messageId)) messageId = hash64();
+
+  // Create the message
+  var message = {
+    id: messageId,
+    userId: userId,
+    content: content,
+    isSystemMsg: isSystemMsg,
+    timestamp: Date.now()
+  };
+
+  // Add the message to the room and return it
+  room.messages[messageId] = message;
+  return message;
+}
+
 /*******************
  * Socket Handling *
  *******************/
@@ -84,7 +121,7 @@ io.on("connection", (socket) => {
   // Save the users details
   users[userId] = {
     id: userId,
-    name: "Guest",
+    name: null,
     roomId: null,
     socket: socket
   };
@@ -103,53 +140,90 @@ io.on("connection", (socket) => {
     while (rooms.hasOwnProperty(roomId)) roomId = hash64();
 
     // Create the room
-    rooms[roomId] = {
+    var room = {
       id: roomId,
-      users: [userId]
+      users: [userId],
+      messages: {}
     };
+    rooms[roomId] = room;
 
     // Update the users detaiils
     users[userId].name = data.userName;
     users[userId].roomId = roomId;
 
+    // The message will be automatically added to the room
+    createMessage(userId, "created the room", true);
+
     console.log("Created room #" + roomId + " for user #" + userId);
 
     // Send the roomId to the user
     fn({
-      roomId: roomId
+      room: room
     });
   });
 
-  socket.on("validateRoomId", (data, fn) => {
-    if (!rooms.hasOwnProperty(data.roomId)) return fn({result: "invalid"});
-    fn({result: "valid"});
+  // Used to add an unnamed user to a room
+  socket.on("joinRoom", (data, fn) => {
+    if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
+    if (!rooms.hasOwnProperty(data.roomId)) return fn({error: "Invalid Room ID"});
+
+    var user = users[userId];
+    var room = rooms[data.roomId];
+
+    // Add the user to the room
+    user.roomId = data.roomId;
+    room.users.push(userId);
+
+    // Cache the users in the room without including the socket
+    var clientUsers = {};
+
+    room.users.forEach(roomUserId => {
+      var roomUser = users[roomUserId];
+
+      // Add the user to the list
+      clientUsers[roomUserId] = {
+        id: roomUserId,
+        name: roomUser.name,
+        roomId: roomUser.roomId
+      };
+    });
+
+    fn({
+      room: room,
+      users: clientUsers
+    });
   });
 
-  socket.on("joinRoom", (data, fn) => {
+  // Called when the users presses the "Join Room" button after setting their username
+  socket.on("enterRoom", (data, fn) => {
     if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
     if (!rooms.hasOwnProperty(data.roomId)) return fn({error: "Invalid Room ID"});
 
-    // Update the users details
     var user = users[userId];
-    user.name = data.userName;
-    user.roomId = data.roomId;
-
-    // Add the user to the room
     var room = rooms[data.roomId];
-    room.users.push(userId);
 
-    // Send 
-    fn({
-      users: room.users
-    });
+    if (user.roomId != room.id || !room.users.includes(userId)) {
+      return fn({error: "Can't enter room that hasn't been joined"});
+    }
 
-    room.users.forEach(roomUser => {
+    user.name = data.userName;
+
+    var message = createMessage(userId, "joined the room", true);
+    console.debug(message);
+    fn({message: message});
+
+    room.users.forEach(roomUserId => {
+      var roomUser = users[roomUserId];
+
       // Send the new users info to all other active room users
-      if (roomUser != userId & users[roomUser].roomId == room.id) {
-        users[roomUser].socket.emit("userJoined", {
-          userId: userId,
-          userName: user.name
+      if (roomUserId != userId && roomUser.roomId == room.id) {
+        roomUser.socket.emit("userJoined", {
+          user: {
+            id: userId,
+            name: user.name
+          },
+          message: message
         });
       }
     });

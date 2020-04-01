@@ -5,7 +5,9 @@
 var socket = io("http://localhost:3000");
 
 var userId;
-var roomId;
+
+var users = {};
+var room;
 
 /********************
  * Helper Functions *
@@ -13,14 +15,32 @@ var roomId;
 
 function getURLParam(name){
   var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
-  return results && results[1] || 0;
+  return results && results[1] || null;
 }
 
 function resetRoomMenu() {
   $("#set-username").show();
   $("#set-username-submit").attr("value", "Create Room");
   window.history.pushState(null, null, window.location.href.split("?")[0]);
-  roomId = null;
+  room = null;
+  if (users.hasOwnProperty(userId)){
+    users[userId].roomId = null;
+  }
+}
+
+function addMessage(message) {
+  $("#chat-history").append(`
+    <div class="msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}">
+      <h2>${users[message.userId].name}</h2>
+      <p>${message.content}</p>
+    </div>
+  `);
+}
+
+function populateChat(messages) {
+  for (var messageId in messages) {
+    addMessage(messages[messageId]);
+  }
 }
 
 /*******************
@@ -32,22 +52,39 @@ socket.on("init", data => {
   console.debug("Obtained userId " + data.userId);
   userId = data.userId;
 
-  // Check if the provided roomId is valid
-  if (roomId && roomId != 0) {
-    socket.emit("validateRoomId", {
+  var roomId = getURLParam("room");
+
+  users[userId] = {
+    id: userId,
+    name: "Guest",
+    roomId: roomId
+  };
+
+  if (roomId) {
+    console.debug("Trying to join room #" + roomId);
+    $("#set-username-submit").attr("value", "Join Room");
+
+    socket.emit("joinRoom", {
       roomId: roomId
     }, response => {
-      if (response.result != "success") {
-        console.warn("Tried to join invalid room #" + roomId + ":", response.error);
+      if (response.error) {
+        console.warn("Failed to join room #" + roomId + ":", response.error);
         resetRoomMenu();
         return;
       }
+
+      console.debug("Joined room #" + roomId);
+
+      users = response.users;
+      room = response.room;
+      populateChat(room.messages);
     });
   }
 });
 
 socket.on("userJoined", data => {
-  console.debug("User #" + data.userId + " joined with name " + data.userName);
+  users[data.user.id] = data.user;
+  if (data.message) addMessage(data.message);
 });
 
 /**************
@@ -57,28 +94,32 @@ socket.on("userJoined", data => {
 $("#set-username").submit(event => {
   event.preventDefault();
 
+  var user = users[userId];
   var userName = $("#username-input").val();
 
   $("#set-username").hide();
   $("#room-spinner").show();
 
-  // If a room ID was supplied in the URL, try to join it
-  if (roomId && roomId != 0) {
-    console.debug("Joining room #" + roomId + "...");
-    socket.emit("joinRoom", {
-      roomId: roomId,
+  // If the user is already in a room, enter it
+  if (room) {
+    console.debug("Entering room #" + user.roomId + "...");
+    socket.emit("enterRoom", {
+      roomId: user.roomId,
       userName: userName
     }, response => {
       $("#room-spinner").hide();
 
       if (response.error) {
-        console.error("Failed to join room #" + roomId + ":", response.error);
+        console.error("Failed to join room #" + user.roomId + ":", response.error);
         resetRoomMenu();
         return;
       }
 
-      console.debug("Joined room #" + roomId);
+      console.debug("Entered room #" + user.roomId);
       $("#overlay-container").hide();
+
+      user.name = userName;
+      if (response.message) addMessage(response.message);
     });
   } else {
     console.debug("Creating room...");
@@ -92,32 +133,28 @@ $("#set-username").submit(event => {
         return console.error("Failed to create room:", response.error);
       }
 
-      roomId = response.roomId;
+      room = response.room;
+      user.name = userName;
 
-      console.debug("Created room #" + roomId);
+      console.debug("Created room #" + room.id);
       $("#create-room-success").show();
 
-      var roomLink = window.location.href.split("?")[0] + "?room=" + roomId;
+      var roomLink = window.location.href.split("?")[0] + "?room=" + room.id;
       $("#room-link").text(roomLink);
       $("#room-link").attr("href", roomLink);
       window.history.pushState(null, null, roomLink);
+
+      populateChat(room.messages);
     });
   }
 });
 
 $("#start-game").click(event => {
-  if (!roomId) return console.error("Attempted to start game without a room ID");
-  console.debug("Starting game...");
-  $("#overlay-container").hide();
-});
+  if (!room || !room.users) return console.error("Attempted to start game without a room ID");
 
-$(document).ready(event => {
-  var roomIdParam = getURLParam("room");
-  if (roomIdParam && roomIdParam != 0) {
-    console.debug("Trying to join room #" + roomIdParam);
-    $("#set-username-submit").attr("value", "Join Room");
-    roomId = roomIdParam;
-  }
+  console.debug("Starting game...");
+
+  $("#overlay-container").hide();
 });
 
 /********************
@@ -130,7 +167,11 @@ $(".card").draggable({
   start: (event, ui) => {
     ui.helper.data("addedToStorage", false);
   },
+  drag: (event, ui) => {
+    $(event.target).css("z-index", 99);
+  },
   stop: (event, ui) => {
+    $(event.target).css("z-index", "");
     // Move the card out of the hand
     if (!ui.helper.data("addedToStorage")) {
       if (!$(event.target).parent().is($("#game-wrapper"))) {

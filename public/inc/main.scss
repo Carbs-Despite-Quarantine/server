@@ -3,9 +3,14 @@ $font: "Helvetica Neue", Arial, Helvetica, Geneva, sans-serif;
 $cardScale: 0.5;
 $cardWidth: 270px;
 $cardHeight: 378px;
+$cardSpacing: 2px;
+
+$handWidth: 7 * ($cardWidth * $cardScale + 2 * $cardSpacing);
 
 $outlineColor: #9c9c9c;
 $contrastColor: #ffd200;
+
+$resizeTransition: 0.2s ease;
 
 @mixin disable-selection {
 	-webkit-touch-callout: none;
@@ -18,10 +23,26 @@ $contrastColor: #ffd200;
 
 body {
 	font-family: $font;
-	overflow: hidden;
 	width: 100%;
 	height: 100%;
 	margin: 0;
+	overflow: hidden;
+}
+
+input[type=text] {
+	border: 0;
+	border-bottom: 3px solid black;
+	font-family: $font;
+	font-weight: 700;
+	outline: none;
+
+	&.invalid {
+		border-color: red;
+
+		&::-webkit-input-placeholder, &:-ms-input-placeholde, &:-moz-placeholder, &::placeholder {
+			color: red;
+		}
+	}
 }
 
 #game-wrapper {
@@ -29,24 +50,101 @@ body {
 	height: 100%;
 	width: 100%;
 	position: absolute;
+	left: 0;
+	top: 0;
+	overflow: hidden;
+
+	#chat-container {
+		background-color: white;
+		position: absolute;
+		width: 13%;
+		height: calc(80% - #{$cardHeight * $cardScale});
+		right: 10%;
+		top: 10%;
+		border: solid 1px $outlineColor;
+		transition: $resizeTransition;
+		z-index: 5;
+		padding: 10px;
+
+		@media only screen and (max-width: $handWidth + 270px) {
+			right: 0;
+			top: 0;
+			border-top: 0;
+			border-right: 0;
+			height: calc(100% - #{$cardHeight * $cardScale} - 33px);
+			width: 20%;
+		}
+
+		@media only screen and (max-width: $handWidth) {
+			height: calc(100% - #{$cardHeight * $cardScale} - 51px);
+			width: 25%;
+		}
+
+		h1 {
+			font-size: 1.3em;
+			margin: 3px 0;
+		}
+
+		#chat-history {
+			display: flex;
+			flex-direction: column;
+			width: 100%;
+			height: 80%;
+			margin: 10px 0;
+			overflow-y: scroll;
+			overflow-x: hidden;
+
+			@media only screen and (max-width: $handWidth + 270px) {
+				height: 85%;
+			}
+
+			> :first-child {
+			  margin-top: auto !important;
+			}
+
+			&::-webkit-scrollbar {
+			  width: 0;
+			}
+
+			.msg-container {
+				margin: 10px 0;
+				width: 100%;
+
+				&.system-msg {
+					font-style: italic;
+					color: #636363;
+				}
+
+				h2 {
+					font-size: 1em;
+					margin: 0;
+				}
+
+				p {
+					margin: 0;
+				}
+			}
+		}
+
+		input[type=text] {
+			width: 100%;
+			font-size: 16px;
+		}
+	}
 
 	.card-storage {
 		background-color: white;
 		width: $cardWidth * $cardScale;
 		height: $cardHeight * $cardScale;
 		position: absolute;
-		padding: 10px;
+		padding: 10px 0;
 		border: solid 1px $outlineColor;
 
 		&.ui-droppable-hover {
 			border-color: black;
 		}
 
-		.card {
-			margin: 0 2px;
-		}
-
-		&#hand {
+		&#hand { 
 			width: 80%;
 			bottom: 0;
 			left: 10%;
@@ -54,19 +152,49 @@ body {
 			padding-bottom: 2px;
 			display: flex;
 			flex-direction: row;
+			justify-content: center;
 			border-bottom: none;
+			transition: $resizeTransition;
+
+			@media only screen and (max-width: $handWidth + 270px) {
+				width: 100%;
+				left: 0;
+				right: 0;
+				border-left: 0;
+				border-right: 0;
+			}
+
+			@media only screen and (max-width: $handWidth) {
+				overflow-y: hidden;
+				overflow-x: scroll;
+				padding-bottom: 20px;
+				justify-content: flex-start;
+
+				&::-webkit-scrollbar {
+				  height: 15px;
+				}
+
+				&::-webkit-scrollbar-thumb {
+				  border-radius: 25px;
+				  background-color: $contrastColor;
+				}
+
+				&::-webkit-scrollbar-track {
+				  border-radius: 25px;
+				  background-color: transparent;
+				}
+			}
 
 			.card {
 				flex: 0 0 auto;
+				margin: 0 $cardSpacing;
 			}
 		}
 
 		&#deck {
 			left: 20px;
-			top: 20px;	
-
-			.card {
-			}
+			top: 20px;
+			padding: 10px;
 		}
 	}
 }
@@ -90,13 +218,18 @@ body {
 	  border: solid 1px black;
 	}
 
+	&:hover {
+		transform: scale(1.02);
+		z-index: 3;
+	}
+
 	&.ui-draggable-dragging {
 		transform: scale(1.02) rotate(2deg);
 		z-index: 3;
 	}
 
 	.card-text::selection {
-		background: $contrastColor;
+		background-color: $contrastColor;
 	}
 
 	&.front {
@@ -216,6 +349,11 @@ $overlayHeight: 300px;
 		border: 3px solid black;
 		border-radius: 18px;
 
+		@media only screen and (max-width: $overlayWidth + 40px) {
+			width: 100%;
+			border-radius: 0;
+		}
+
 		#settings-panel {
 			padding: 20px;
 			text-align: center;
@@ -223,19 +361,9 @@ $overlayHeight: 300px;
 
 			input[type=text] {
 				width: 250px;
-				border: 0;
-				border-bottom: 4px solid black;
-				font: 20px $font;
+				border-bottom-width: 4px;
+				font-size: 20px;
 				font-weight: 700;
-				outline: none;
-
-				&.invalid {
-					border-color: red;
-
-					&::-webkit-input-placeholder, &:-ms-input-placeholde, &:-moz-placeholder, &::placeholder {
-						color: red;
-					}
-				}
 			}
 
 			input[type=submit], button {

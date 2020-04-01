@@ -15,17 +15,17 @@
 		integrity="sha256-eGE6blurk5sHj+rmkfsGYeKyZx3M4bG+ZlFyA7Kns7E="
 		crossorigin="anonymous">	
 	</script>
+	<script src="inc/jquery.ui.touch-punch.js"></script>
 	<script 
 		src="https://kit.fontawesome.com/d2e8fae07c.js"
 		crossorigin="anonymous">	
 	</script>
-  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 	<div id="game-wrapper">
 		<div class="card-storage" id="deck">
 		</div>
-		
 		<div class="card-storage" id="hand">
 			<div class="card white front">
 				<div class="card-text">Getting naked and watching Play School.</div>
@@ -50,6 +50,11 @@
 				<div class="special draw"></div>
 				<div class="card-text">Make a haiku.</div>
 			</div>
+		</div>
+		<div id="chat-container">
+			<h1>Chatroom</h1>
+			<div id="chat-history"></div>
+			<input type="text" id="chat-submit" placeholder="Type a message">
 		</div>
 	</div>
 	<div id="overlay-container">
