@@ -1,4 +1,13 @@
 /********************
+ * Global Variables *
+ ********************/
+
+var socket = io("http://localhost:3000");
+
+var userId;
+var roomId;
+
+/********************
  * Helper Functions *
  ********************/
 
@@ -7,19 +16,34 @@ function getURLParam(name){
   return results && results[1] || 0;
 }
 
+function resetRoomMenu() {
+  $("#set-username").show();
+  $("#set-username-submit").attr("value", "Create Room");
+  window.history.pushState(null, null, window.location.href.split("?")[0]);
+  roomId = null;
+}
+
 /*******************
  * Socket Handling *
  *******************/
-
-var socket = io("http://localhost:3000");
-
-var userId;
-var roomId;
 
 socket.on("init", data => {
   if (data.error) return console.error("Failed to initialize socket:", data.error);
   console.debug("Obtained userId " + data.userId);
   userId = data.userId;
+
+  // Check if the provided roomId is valid
+  if (roomId && roomId != 0) {
+    socket.emit("validateRoomId", {
+      roomId: roomId
+    }, response => {
+      if (response.result != "success") {
+        console.warn("Tried to join invalid room #" + roomId + ":", response.error);
+        resetRoomMenu();
+        return;
+      }
+    });
+  }
 });
 
 socket.on("userJoined", data => {
@@ -48,10 +72,8 @@ $("#set-username").submit(event => {
       $("#room-spinner").hide();
 
       if (response.error) {
-        $("#set-username").show();
-        $("#set-username-submit").attr("value", "Create Room");
         console.error("Failed to join room #" + roomId + ":", response.error);
-        roomId = null;
+        resetRoomMenu();
         return;
       }
 

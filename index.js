@@ -120,6 +120,11 @@ io.on("connection", (socket) => {
     });
   });
 
+  socket.on("validateRoomId", (data, fn) => {
+    if (!rooms.hasOwnProperty(data.roomId)) return fn({result: "invalid"});
+    fn({result: "valid"});
+  });
+
   socket.on("joinRoom", (data, fn) => {
     if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
