@@ -19,7 +19,7 @@
 		src="https://kit.fontawesome.com/d2e8fae07c.js"
 		crossorigin="anonymous">	
 	</script>
-  <script src="./socket.io/socket.io.js"></script>
+  <script src="http://localhost:3000/socket.io/socket.io.js"></script>
 </head>
 <body>
 	<div id="game-wrapper">
@@ -57,12 +57,12 @@
 			<div id="settings-panel">
 				<h1>Cards Against Humanity</h1>
 				<p>A party game for horrible people.</p><br />
-				<form id="create-room">
+				<form id="set-username">
 					<input type="text" id="username-input" spellcheck="false" autocomplete="off" placeholder="Pick a username..." required="true" />
 					<br /><br />
-					<input type="submit" value="Create Room" />
+					<input type="submit" value="Create Room" id="set-username-submit" />
 				</form>
-				<i id="create-room-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw" style="display: none;"></i>
+				<i id="room-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw" style="display: none;"></i>
 				<span id="create-room-success" style="display: none;">
 					<h3>Created Room!</h3>
 					<p><a href="#" id="room-link"></a></p>

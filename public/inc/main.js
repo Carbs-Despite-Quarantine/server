@@ -1,6 +1,15 @@
-/**************
- * Room Setup *
- **************/
+/********************
+ * Helper Functions *
+ ********************/
+
+function getURLParam(name){
+  var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+  return results && results[1] || 0;
+}
+
+/*******************
+ * Socket Handling *
+ *******************/
 
 var socket = io("http://localhost:3000");
 
@@ -13,40 +22,80 @@ socket.on("init", data => {
   userId = data.userId;
 });
 
-$("#create-room").submit(event => {
+socket.on("userJoined", data => {
+  console.debug("User #" + data.userId + " joined with name " + data.userName);
+});
+
+/**************
+ * Room Setup *
+ **************/
+
+$("#set-username").submit(event => {
   event.preventDefault();
 
-  console.debug("Creating room...");
   var userName = $("#username-input").val();
 
-  $("#create-room").hide();
-  $("#create-room-spinner").show();
+  $("#set-username").hide();
+  $("#room-spinner").show();
 
-  socket.emit("createRoom", {
-    userName: userName
-  }, response => {
-    $("#create-room-spinner").hide();
+  // If a room ID was supplied in the URL, try to join it
+  if (roomId && roomId != 0) {
+    console.debug("Joining room #" + roomId + "...");
+    socket.emit("joinRoom", {
+      roomId: roomId,
+      userName: userName
+    }, response => {
+      $("#room-spinner").hide();
 
-    if (response.error) {
-      $("#create-room").show();
-      return console.error("Failed to create room:", response.error);
-    }
+      if (response.error) {
+        $("#set-username").show();
+        $("#set-username-submit").attr("value", "Create Room");
+        console.error("Failed to join room #" + roomId + ":", response.error);
+        roomId = null;
+        return;
+      }
 
-    roomId = response.roomId;
+      console.debug("Joined room #" + roomId);
+      $("#overlay-container").hide();
+    });
+  } else {
+    console.debug("Creating room...");
+    socket.emit("createRoom", {
+      userName: userName
+    }, response => {
+      $("#room-spinner").hide();
 
-    console.debug("Created room #" + roomId);
-    $("#create-room-success").show();
+      if (response.error) {
+        $("#set-username").show();
+        return console.error("Failed to create room:", response.error);
+      }
 
-    var roomLink = "http://localhost:3000?room=" + roomId;
-    $("#room-link").text(roomLink);
-    $("#room-link").attr("href", roomLink);
-  });
+      roomId = response.roomId;
+
+      console.debug("Created room #" + roomId);
+      $("#create-room-success").show();
+
+      var roomLink = window.location.href.split("?")[0] + "?room=" + roomId;
+      $("#room-link").text(roomLink);
+      $("#room-link").attr("href", roomLink);
+      window.history.pushState(null, null, roomLink);
+    });
+  }
 });
 
 $("#start-game").click(event => {
   if (!roomId) return console.error("Attempted to start game without a room ID");
   console.debug("Starting game...");
   $("#overlay-container").hide();
+});
+
+$(document).ready(event => {
+  var roomIdParam = getURLParam("room");
+  if (roomIdParam && roomIdParam != 0) {
+    console.debug("Trying to join room #" + roomIdParam);
+    $("#set-username-submit").attr("value", "Join Room");
+    roomId = roomIdParam;
+  }
 });
 
 /********************

@@ -9,6 +9,7 @@ var io = require("socket.io")(http);
  * User:
  *  - id (hash)
  *  - name (string)
+ *  - roomId (hash)
  *  - socket (<socket>)
  **/
 var users = {}
@@ -84,6 +85,7 @@ io.on("connection", (socket) => {
   users[userId] = {
     id: userId,
     name: "Guest",
+    roomId: null,
     socket: socket
   };
 
@@ -96,9 +98,6 @@ io.on("connection", (socket) => {
     if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    // Set the users name
-    users[userId].name = data.userName;
-
     // Generate an ID for the room
     var roomId = hash64();
     while (rooms.hasOwnProperty(roomId)) roomId = hash64();
@@ -109,11 +108,45 @@ io.on("connection", (socket) => {
       users: [userId]
     };
 
+    // Update the users detaiils
+    users[userId].name = data.userName;
+    users[userId].roomId = roomId;
+
     console.log("Created room #" + roomId + " for user #" + userId);
 
     // Send the roomId to the user
     fn({
       roomId: roomId
+    });
+  });
+
+  socket.on("joinRoom", (data, fn) => {
+    if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
+    if (!validateString(data.userName)) return fn({error: "Invalid Username"});
+    if (!rooms.hasOwnProperty(data.roomId)) return fn({error: "Invalid Room ID"});
+
+    // Update the users details
+    var user = users[userId];
+    user.name = data.userName;
+    user.roomId = data.roomId;
+
+    // Add the user to the room
+    var room = rooms[data.roomId];
+    room.users.push(userId);
+
+    // Send 
+    fn({
+      users: room.users
+    });
+
+    room.users.forEach(roomUser => {
+      // Send the new users info to all other active room users
+      if (roomUser != userId & users[roomUser].roomId == room.id) {
+        users[roomUser].socket.emit("userJoined", {
+          userId: userId,
+          userName: user.name
+        });
+      }
     });
   });
 });
