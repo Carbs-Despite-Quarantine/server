@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Cards Against Humanity</title>
+	<link rel="stylesheet" type="text/css" href="inc/main.css">
+	<script 
+		src="https://code.jquery.com/jquery-3.4.1.min.js" 
+		integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" 
+		crossorigin="anonymous">	
+	</script>
+	<script
+		src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"
+		integrity="sha256-eGE6blurk5sHj+rmkfsGYeKyZx3M4bG+ZlFyA7Kns7E="
+		crossorigin="anonymous">	
+	</script>
+	<script 
+		src="https://kit.fontawesome.com/d2e8fae07c.js"
+		crossorigin="anonymous">	
+	</script>
+  <script src="./socket.io/socket.io.js"></script>
+</head>
+<body>
+	<div id="game-wrapper">
+		<div class="card-storage" id="deck">
+		</div>
+		
+		<div class="card-storage" id="hand">
+			<div class="card white front">
+				<div class="card-text">Getting naked and watching Play School.</div>
+			</div>
+			<div class="card white front">
+				<div class="card-text">Getting married, having a few kids, buying some stuff, retiring to Queensland and dying.</div>
+			</div>
+			<div class="card white front">
+				<div class="card-text">A literal tornado of fire.</div>
+			</div>
+			<div class="card white back">
+				<div class="card-text">Cards Against Humanity</div>
+			</div>
+			<div class="card white front">
+				<div class="card-text">Bees?</div>
+			</div>
+			<div class="card black back">
+				<div class="card-text">Cards Against Humanity</div>
+			</div>
+			<div class="card black front">
+				<div class="special pick pick-three"></div>
+				<div class="special draw"></div>
+				<div class="card-text">Make a haiku.</div>
+			</div>
+		</div>
+	</div>
+	<div id="overlay-container">
+		<div id="overlay-window">
+			<div id="settings-panel">
+				<h1>Cards Against Humanity</h1>
+				<p>A party game for horrible people.</p><br />
+				<form id="create-room">
+					<input type="text" id="username-input" spellcheck="false" autocomplete="off" placeholder="Pick a username..." required="true" />
+					<br /><br />
+					<input type="submit" value="Create Room" />
+				</form>
+				<i id="create-room-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw" style="display: none;"></i>
+				<span id="create-room-success" style="display: none;">
+					<h3>Created Room!</h3>
+					<p><a href="#" id="room-link"></a></p>
+
+						<br />
+					<button id="start-game">Start Game</button>
+				</span>
+			</div>
+		</div>
+	</div>
+	<script src="inc/main.js"></script>
+</body>
+</html>
