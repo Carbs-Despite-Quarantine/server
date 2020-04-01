@@ -1,5 +1,5 @@
 node_modules
 
-public/inc/.sass-cache/
-public/inc/*.css
-public/inc/*.css.map
+.sass-cache/
+*.css
+*.css.map
