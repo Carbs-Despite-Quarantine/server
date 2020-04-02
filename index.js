@@ -458,6 +458,6 @@ io.on("connection", (socket) => {
  * Web Server *
  **************/
 
-var server = http.listen(process.env.PORT || 3000, () => {
+var server = http.listen(process.env.CAH_PORT || 3000, () => {
   console.log("Listening on port %d.", server.address().port);
 });
