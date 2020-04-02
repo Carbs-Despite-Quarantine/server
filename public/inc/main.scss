@@ -21,6 +21,19 @@ $resizeTransition: 0.2s ease;
 	user-select: none;
 }
 
+@mixin wrap-words {
+	overflow-wrap: break-word;
+	word-wrap: break-word;
+
+	-ms-word-break: break-all;
+	word-break: break-word;
+
+	-ms-hyphens: auto;
+	-moz-hyphens: auto;
+	-webkit-hyphens: auto;
+	hyphens: auto;
+}
+
 body {
 	font-family: $font;
 	width: 100%;
@@ -88,27 +101,46 @@ input[type=text] {
 		#chat-history {
 			display: flex;
 			flex-direction: column;
-			width: 100%;
-			height: 80%;
-			margin: 10px 0;
+			position: absolute;
 			overflow-y: scroll;
 			overflow-x: hidden;
+			top: 30px;
+			bottom: 30px;
+			left: 0;
+			right: 10px;
+			margin: 15px 0;
 
-			@media only screen and (max-width: $handWidth + 270px) {
-				height: 85%;
+			scrollbar-width: thin;
+			scrollbar-color: $contrastColor $outlineColor;
+
+			&::-webkit-scrollbar {
+			  width: 3px;
+			}
+
+			&::-webkit-scrollbar-thumb {
+			  border-radius: 0px;
+			  background-color: $contrastColor;
+			}
+
+			&::-webkit-scrollbar-track {
+			  border-radius: 0px;
+			  background-color: $outlineColor;
 			}
 
 			> :first-child {
 			  margin-top: auto !important;
 			}
 
-			&::-webkit-scrollbar {
-			  width: 0;
-			}
-
 			.msg-container {
-				margin: 10px 0;
-				width: 100%;
+				margin: 1px 0;
+				padding: 8px 10px;
+				width: calc(100% - 23px);
+				transition: 0.1s ease;
+
+				&:hover {
+					background-color: #ebebeb;
+					transition: 0.1s ease;
+				}
 
 				&.system-msg {
 					font-style: italic;
@@ -122,13 +154,16 @@ input[type=text] {
 
 				p {
 					margin: 0;
+					@include wrap-words;
 				}
 			}
 		}
 
 		input[type=text] {
-			width: 100%;
+			width: calc(100% - 20px);
 			font-size: 16px;
+			position: absolute;
+			bottom: 15px;
 		}
 	}
 
@@ -169,6 +204,8 @@ input[type=text] {
 				overflow-x: scroll;
 				padding-bottom: 20px;
 				justify-content: flex-start;
+
+				scrollbar-color: $contrastColor transparent;
 
 				&::-webkit-scrollbar {
 				  height: 15px;

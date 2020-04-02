@@ -47,6 +47,32 @@ function validateString(string) {
   return typeof string === "string" && string.length > 0;
 }
 
+/***************
+ * Data Lookup *
+ ***************/
+
+function getUser(userId) {
+  if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
+  return users[userId];
+}
+
+function getRoom(roomId) {
+  if (!rooms.hasOwnProperty(roomId)) return {error: "Invalid Room ID"};
+  return rooms[roomId];
+}
+
+function getUserAndRoom(userId) {
+  var user = getUser(userId);
+  if (user.error) return {error: user.error};
+
+  if (!user.roomId || user.roomId == 0) return {error: "Not in a room"};
+
+  var room = getRoom(user.roomId);
+  if (room.error) return {error: room.error};
+
+  return {user: user, room: room};
+}
+
 /********************
  * Helper Functions *
  ********************/
@@ -83,17 +109,13 @@ app.get("/status", (req, res) => {
  ***************/
 
 function createMessage(userId, content, isSystemMsg) {
-  if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
-  var user = users[userId];
-  if (!user.roomId || user.roomId == 0) return {error: "Not in a room"};
+  var info = getUserAndRoom(userId);
+  if (info.error) return info;
   if (!validateString(content)) return {error: "Invalid Message"};
-  
-  // Cache the room object
-  var room = rooms[user.roomId];
 
   // Generate an ID for the message
   var messageId = hash64();
-  while (room.messages.hasOwnProperty(messageId)) messageId = hash64();
+  while (info.room.messages.hasOwnProperty(messageId)) messageId = hash64();
 
   // Create the message
   var message = {
@@ -105,7 +127,7 @@ function createMessage(userId, content, isSystemMsg) {
   };
 
   // Add the message to the room and return it
-  room.messages[messageId] = message;
+  info.room.messages[messageId] = message;
   return message;
 }
 
@@ -131,8 +153,14 @@ io.on("connection", (socket) => {
     userId: userId
   });
 
+  /*****************
+   * Room Handling *
+   *****************/
+
   socket.on("createRoom", (data, fn) => {
-    if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
+    var user = getUser(userId);
+    if (user.error) return fn(user);
+
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
 
     // Generate an ID for the room
@@ -148,8 +176,8 @@ io.on("connection", (socket) => {
     rooms[roomId] = room;
 
     // Update the users detaiils
-    users[userId].name = data.userName;
-    users[userId].roomId = roomId;
+    user.name = data.userName;
+    user.roomId = roomId;
 
     // The message will be automatically added to the room
     createMessage(userId, "created the room", true);
@@ -157,18 +185,16 @@ io.on("connection", (socket) => {
     console.log("Created room #" + roomId + " for user #" + userId);
 
     // Send the roomId to the user
-    fn({
-      room: room
-    });
+    fn({room: room});
   });
 
   // Used to add an unnamed user to a room
   socket.on("joinRoom", (data, fn) => {
-    if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
-    if (!rooms.hasOwnProperty(data.roomId)) return fn({error: "Invalid Room ID"});
+    var user = getUser(userId);
+    if (user.error) return fn(user);
 
-    var user = users[userId];
-    var room = rooms[data.roomId];
+    var room = getRoom(data.roomId);
+    if (room.error) return fn(room);
 
     // Add the user to the room
     user.roomId = data.roomId;
@@ -196,12 +222,13 @@ io.on("connection", (socket) => {
 
   // Called when the users presses the "Join Room" button after setting their username
   socket.on("enterRoom", (data, fn) => {
-    if (!users.hasOwnProperty(userId)) return fn({error: "Invalid User"});
-    if (!validateString(data.userName)) return fn({error: "Invalid Username"});
-    if (!rooms.hasOwnProperty(data.roomId)) return fn({error: "Invalid Room ID"});
+    var user = getUser(userId);
+    if (user.error) return fn(user);
 
-    var user = users[userId];
-    var room = rooms[data.roomId];
+    if (!validateString(data.userName)) return fn({error: "Invalid Username"});
+
+    var room = getRoom(data.roomId);
+    if (room.error) return fn(room);
 
     if (user.roomId != room.id || !room.users.includes(userId)) {
       return fn({error: "Can't enter room that hasn't been joined"});
@@ -229,36 +256,34 @@ io.on("connection", (socket) => {
   });
 
   socket.on("userLeft", (data) => {
-    if (!users.hasOwnProperty(userId)) return;
-    var user = users[userId];
-    if (!user.roomId || !rooms.hasOwnProperty(user.roomId)) return;
+    var info = getUserAndRoom(userId);
+    if (info.error) return;
 
-    var room = rooms[user.roomId];
     var activeUsers = 0;
 
     // If the user never entered the room, don't inform users of leave
-    if (!user.name) {
+    if (!info.user.name) {
       // We have to do this twice to prevent users who haven't entered leaving the room open indefinitely
-      room.users.forEach(roomUserId => {
-        if (roomUserId != userId && users[roomUserId].roomId == room.id) activeUsers++;
+      info.room.users.forEach(roomUserId => {
+        if (roomUserId != userId && users[roomUserId].roomId == info.room.id) activeUsers++;
       });
       if (activeUsers == 0) {
-        console.log("Deleting room #" + room.id + " because all users have left");
-        delete rooms[room.id];
+        console.log("Deleting room #" + info.room.id + " because all users have left");
+        delete rooms[info.room.id];
       }
 
       // If we aren't returning here, we still need the roomId for createMessage()
-      user.roomId = null;
+      info.user.roomId = null;
       return;
     }
 
     var message = createMessage(userId, "left the room", true);
 
-    room.users.forEach(roomUserId => {
+    info.room.users.forEach(roomUserId => {
       var roomUser = users[roomUserId];
 
       // Notify active users that the user left
-      if (roomUserId != userId && roomUser.roomId == room.id) {
+      if (roomUserId != userId && roomUser.roomId == info.room.id) {
         activeUsers++;
         roomUser.socket.emit("userLeft", {
           userId: userId,
@@ -269,11 +294,34 @@ io.on("connection", (socket) => {
 
     // Delete the room once all users have left
     if (activeUsers == 0) {
-      console.log("Deleting room #" + room.id + " because all users have left");
-      delete rooms[room.id];
+      console.log("Deleting room #" + info.room.id + " because all users have left");
+      delete rooms[info.room.id];
     }
 
-    user.roomId = null;
+    info.user.roomId = null;
+  });
+
+  /***************
+   * Chat System *
+   ***************/
+
+  socket.on("chatMessage", (data, fn) => {
+    var info = getUserAndRoom(userId);
+    if (info.error) return fn(info);
+    if (!validateString(data.content)) return fn({error: "Invalid Message"});
+
+    var message = createMessage(userId, data.content, false);
+
+    fn({message: message});
+
+    info.room.users.forEach(roomUserId => {
+      var roomUser = users[roomUserId];
+
+      // Send the message to other active users
+      if (roomUserId != userId && roomUser.roomId == info.room.id) {
+        roomUser.socket.emit("chatMessage", {message: message});
+      }
+    });
   });
 });
 

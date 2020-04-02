@@ -28,6 +28,10 @@ function resetRoomMenu() {
   }
 }
 
+function scrollMessages() {
+  $("#chat-history").scrollTop($("#chat-history").prop("scrollHeight"));
+}
+
 function addMessage(message) {
   $("#chat-history").append(`
     <div class="msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}">
@@ -35,6 +39,8 @@ function addMessage(message) {
       <p>${message.content}</p>
     </div>
   `);
+
+  scrollMessages();
 }
 
 function populateChat(messages) {
@@ -167,6 +173,36 @@ $("#start-game").click(event => {
   console.debug("Starting game...");
 
   $("#overlay-container").hide();
+});
+
+/***************
+ * Chat System *
+ ***************/
+
+$("#chat-input").keyup(event => {
+  event.stopPropagation();
+
+  var content = $("#chat-input").val().replace(/^\s+|\s+$/g, "");
+
+  // 13 is the keycode for enter
+  if (content.length > 0 && event.which == 13) {
+    socket.emit("chatMessage", {
+      content: content
+    }, response => {
+      $("#chat-input").val("");
+      if (response.error) return console.warn("Failed to send chat message:", response.error);
+      if (response.message) addMessage(response.message);
+    });
+
+  }
+});
+
+$(window).resize(event => {
+  scrollMessages();
+});
+
+socket.on("chatMessage", data => {
+  if (data.message) addMessage(data.message);
 });
 
 /********************
