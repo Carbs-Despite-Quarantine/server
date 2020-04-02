@@ -32,9 +32,129 @@ function scrollMessages() {
   $("#chat-history").scrollTop($("#chat-history").prop("scrollHeight"));
 }
 
-function addMessage(message) {
+function likeMessage(message) {
+  if (message.likes.hasOwnProperty(userId)) return console.warn("Can't like a message twice!");
+  socket.emit("likeMessage", {
+    msgId: message.id
+  }, response => {
+    if (response.error) return console.warn("Failed to like message #" + message.id + ":", response.error);
+    if (!response.like) return;
+    addLikes(message.id, {
+      [userId]: response.like
+    });
+  });
+}
+
+// Re-initializes the given likes div with just heart icon
+function clearLikesDiv(likesDiv, msgId) {
+  likesDiv.html(`
+    <div class="msg-heart">
+      <i class="far fa-heart"></i>
+    </div>
+  `);
+
+  var message = room.messages[msgId];
+
+  // Listen for clicks on the heart icon
+  likesDiv.children(".msg-heart").first().click(event => {
+    // Remove like if already added
+    if (message.likes.hasOwnProperty(userId)) {
+      socket.emit("unlikeMessage", {
+        msgId: msgId
+      }, response => {
+        if (response.error) return console.warn("Failed to unlike message #" + msgId + ":", response.error);
+        removeLike(msgId, userId);
+      });
+    } else {
+      likeMessage(message);
+    }
+  });
+}
+
+function getOrCreateLikesDiv(msgId) {
+  var msgDiv = $("#msg-" + msgId);
+  if (msgDiv.length == 0) {
+    console.warn("Tried to create like div for invalid msg #", msgId);
+    return null;
+  }
+
+  var contentDiv = msgDiv.first().children(".msg-content");
+  if (contentDiv.length == 0) {
+    console.warn("Failed to get content div for msg #" + msgId);
+    return null;
+  }
+
+  var likesDiv = contentDiv.children(".msg-likes");
+  if (likesDiv.length > 0) {
+    return likesDiv.first();
+  }
+  
+  contentDiv.append(`<div class="msg-likes"></div>`);
+  clearLikesDiv(contentDiv.children(".msg-likes").first(), msgId);
+
+  return contentDiv.children(".msg-likes").first();
+}
+
+function addLikes(msgId, likes, addToMessage=true) {
+  if (!room.messages.hasOwnProperty(msgId)) {
+    console.warn("Tried to add likes to untracked message #", msgId);
+    return;
+  }
+  var likesDiv = getOrCreateLikesDiv(msgId);
+  if (!likesDiv) {
+    console.warn("Failed to add likes to message #", msgId);
+    return;
+  }
+  var message = room.messages[msgId];
+  for (var likeUserId in likes) {
+    if (!users.hasOwnProperty(likeUserId)) {
+      console.warn("Recieved like from invalid user #" + likeUserId);
+      continue;
+    } else if (message.likes.hasOwnProperty(likeUserId) && addToMessage) {
+      console.warn("User #" + likeUserId + " tried to like message #" + msgId + " twice!");
+      continue;
+    }
+    if (addToMessage) message.likes[likeUserId] = likes[likeUserId];
+    if (likeUserId == userId) {
+      var heart = likesDiv.children(".msg-heart").first().children("i").first();
+
+      // Replace the empty heart with a full heart
+      heart.removeClass("far");
+      heart.addClass("fas");
+    }
+    var user = users[likeUserId];
+    likesDiv.append(`
+      <div class="msg-like">
+        <i class="fas fa-${user.icon}" title="Liked by ${user.name}"></i>
+      </div>
+    `);
+  }
+}
+
+function removeLike(msgId, userId) {
+  if (!room.messages.hasOwnProperty(msgId)) {
+    console.warn("Tried to remove a like from untracked message #", msgId);
+    return;
+  }
+  var likesDiv = getOrCreateLikesDiv(msgId);
+  if (!likesDiv) {
+    console.warn("Failed to remove a like from message #", msgId);
+  }
+  var message = room.messages[msgId];
+  delete message.likes[userId];
+
+  // Simply delete the likes div if this was the last like
+  if (Object.keys(message.likes).length == 0) {
+    likesDiv.remove();
+    return;
+  }
+  clearLikesDiv(likesDiv, msgId);
+  addLikes(msgId, message.likes, false);
+}
+
+function addMessage(message, addToRoom=true) {
   $("#chat-history").append(`
-    <div class="msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}">
+    <div class="msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}" id="msg-${message.id}">
       <div class="msg-icon">
         <i class="fas fa-${users[message.userId].icon}"></i>
       </div>
@@ -42,16 +162,28 @@ function addMessage(message) {
         <h2>${users[message.userId].name}</h2>
         <p>${message.content}</p>
       </div>
-
     </div>
   `);
 
+  // Add existing likes to the message
+  if (Object.keys(message.likes).length > 0) {
+    addLikes(message.id, message.likes, false);
+  }
+
   scrollMessages();
+
+  if (addToRoom) {
+    room.messages[message.id] = message;
+  }
+
+  if (!message.isSystemMsg) {
+    $("#msg-" + message.id).dblclick(event => likeMessage(message));
+  }
 }
 
 function populateChat(messages) {
-  for (var messageId in messages) {
-    addMessage(messages[messageId]);
+  for (var msgId in messages) {
+    addMessage(messages[msgId], false);
   }
 }
 
@@ -337,6 +469,14 @@ $(window).resize(event => {
 socket.on("chatMessage", data => {
   if (data.message) addMessage(data.message);
 });
+
+socket.on("likeMessage", data => {
+  if (data.msgId && data.like) addLikes(data.msgId, {[data.like.userId]: data.like});
+});
+
+socket.on("unlikeMessage", data => {
+  if (data.msgId && data.userId) removeLike(data.msgId, data.userId);
+})
 
 /********************
  * Card Interaction *

@@ -28,6 +28,9 @@ var users = {}
  *     - content (string)
  *     - isSystemMsg (bool)
  *     - timestamp (int)
+ *     - likes:
+ *        - userId (hash)
+ *        - timestamp (int)
  **/
 var rooms = {}
 
@@ -63,6 +66,11 @@ function getUser(userId) {
 function getRoom(roomId) {
   if (!rooms.hasOwnProperty(roomId)) return {error: "Invalid Room ID"};
   return rooms[roomId];
+}
+
+function getMessage(room, msgId) {
+  if (!room.messages.hasOwnProperty(msgId)) return {error: "Invalid Message ID"};
+  return room.messages[msgId];
 }
 
 function getUserAndRoom(userId) {
@@ -130,20 +138,21 @@ function createMessage(userId, content, isSystemMsg) {
   if (!validateString(content)) return {error: "Invalid Message"};
 
   // Generate an ID for the message
-  var messageId = hash64();
-  while (info.room.messages.hasOwnProperty(messageId)) messageId = hash64();
+  var msgId = hash64();
+  while (info.room.messages.hasOwnProperty(msgId)) msgId = hash64();
 
   // Create the message
   var message = {
-    id: messageId,
+    id: msgId,
     userId: userId,
     content: content,
     isSystemMsg: isSystemMsg,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    likes: {}
   };
 
   // Add the message to the room and return it
-  info.room.messages[messageId] = message;
+  info.room.messages[msgId] = message;
   return message;
 }
 
@@ -387,6 +396,54 @@ io.on("connection", (socket) => {
       // Send the message to other active users
       if (roomUserId != userId && roomUser.roomId == info.room.id) {
         roomUser.socket.emit("chatMessage", {message: message});
+      }
+    });
+  });
+
+  socket.on("likeMessage", (data, fn) => {
+    var info = getUserAndRoom(userId);
+    if (info.error) return fn(info);
+
+    var message = getMessage(info.room, data.msgId);
+    if (message.error) return fn(message);
+    if (message.isSystemMsg) return fn({error: "Can't like system messages"});
+    if (message.likes.hasOwnProperty(userId)) return fn({error: "Can't like a message twice!"});
+
+    var like = {
+      userId: userId,
+      timestamp: Date.now()
+    };
+
+    message.likes[userId] = like;
+    fn({like: like});
+
+    info.room.users.forEach(roomUserId => {
+      var roomUser = users[roomUserId];
+
+      // Send the like information to other active users
+      if (roomUserId != userId && roomUser.roomId == info.room.id) {
+        roomUser.socket.emit("likeMessage", {msgId: message.id, like: like});
+      }
+    });
+  });
+
+  socket.on("unlikeMessage", (data, fn) => {
+    var info = getUserAndRoom(userId);
+    if (info.error) return fn(info);
+
+    var message = getMessage(info.room, data.msgId);
+    if (message.error) return fn(message);
+    if (!message.likes.hasOwnProperty(userId)) return fn({error: "Can't unlike a message that hasn't been liked!"});
+
+    delete message.likes[userId];
+    fn({});
+
+    info.room.users.forEach(roomUserId => {
+      var roomUser = users[roomUserId];
+
+      // Inform other active users that the like was removed
+      if (roomUserId != userId && roomUser.roomId == info.room.id) {
+        roomUser.socket.emit("unlikeMessage", {msgId: message.id, userId: userId});
       }
     });
   });

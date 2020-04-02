@@ -149,8 +149,10 @@ input[type=text] {
 				}
 
 				&.system-msg .msg-content {
-					font-style: italic;
-					color: #636363;
+					h2, p {
+						font-style: italic;
+						color: #636363;
+					}
 				}
 
 				$iconSize: 2.2em;
@@ -173,6 +175,7 @@ input[type=text] {
 					width: calc(100% - #{$iconSize});
 					margin: 0 5px;
 					margin-right: 0px;
+
 					h2 {
 						font-size: 1em;
 						margin: 0;
@@ -181,6 +184,42 @@ input[type=text] {
 					p {
 						margin: 0;
 						@include wrap-words;
+					}
+
+					.msg-likes {
+						margin: 2px 2px;
+						margin-bottom: 0;
+						display: inline-flex;
+						width: auto;
+						background-color: $iconBackground;
+						border-radius: 20px;
+						padding: 2px;
+
+						div {
+							margin: 2px;
+							width: 1em;
+							height: 1em;
+							display: flex;
+							justify-content: center;
+							align-items: center;
+
+							&.msg-heart {
+								cursor: pointer;
+								
+								.fas {
+									color: red;
+								}
+
+								.far {
+									transition: 0.2s ease;
+
+									&:hover {
+										color: #fa8282;
+										transition: 0.2s ease;
+									}
+								}
+							}
+						}
 					}
 				}
 
