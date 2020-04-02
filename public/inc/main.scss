@@ -9,6 +9,7 @@ $handWidth: 7 * ($cardWidth * $cardScale + 2 * $cardSpacing);
 
 $outlineColor: #9c9c9c;
 $contrastColor: #ffd200;
+$iconBackground: #ededed;
 
 $resizeTransition: 0.2s ease;
 
@@ -56,6 +57,10 @@ input[type=text] {
 			color: red;
 		}
 	}
+}
+
+::selection {
+	background-color: $contrastColor;
 }
 
 #game-wrapper {
@@ -136,25 +141,57 @@ input[type=text] {
 				padding: 8px 10px;
 				width: calc(100% - 23px);
 				transition: 0.1s ease;
+				display: flex;
 
 				&:hover {
 					background-color: #ebebeb;
 					transition: 0.1s ease;
 				}
 
-				&.system-msg {
+				&.system-msg .msg-content {
 					font-style: italic;
 					color: #636363;
 				}
 
-				h2 {
-					font-size: 1em;
-					margin: 0;
+				$iconSize: 2.2em;
+
+				.msg-icon {
+					width: $iconSize;
+					height: $iconSize;
+					background-color: $iconBackground;
+					border-radius: 10px;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+
+					i {
+						font-size: 1.3em;
+					}
 				}
 
-				p {
-					margin: 0;
-					@include wrap-words;
+				.msg-content {
+					width: calc(100% - #{$iconSize});
+					margin: 0 5px;
+					margin-right: 0px;
+					h2 {
+						font-size: 1em;
+						margin: 0;
+					}
+
+					p {
+						margin: 0;
+						@include wrap-words;
+					}
+				}
+
+				@media screen and (max-width: 800px) {
+					.msg-icon {
+						display: none;
+					}
+
+					.msg-content {
+						width: 100%;
+					}
 				}
 			}
 		}
@@ -263,10 +300,6 @@ input[type=text] {
 	&.ui-draggable-dragging {
 		transform: scale(1.02) rotate(2deg);
 		z-index: 3;
-	}
-
-	.card-text::selection {
-		background-color: $contrastColor;
 	}
 
 	&.front {
@@ -414,6 +447,52 @@ $overlayHeight: 300px;
 				text-decoration: none;
 				cursor: pointer;
 				outline: none;
+
+				&:disabled {
+					cursor: not-allowed;
+					color: black;
+					opacity: 0.4;
+				}
+			}
+
+			#select-icon {
+				#icons {
+					justify-content: center;
+					display: flex;
+					flex-wrap: wrap;
+					transition: 0.5s ease;
+
+					.icon {
+						margin: 4px;
+						width: 50px;
+						height: 50px;
+						background-color: $iconBackground;
+						border-radius: 10px;
+						display: flex;
+						justify-content: center;
+						align-items: center;
+						overflow: hidden;
+						cursor: pointer;
+
+						i {
+							font-size: 30px;
+						}
+
+						&:hover, &.selected {
+							margin: 1px;
+							border: 3px solid $outlineColor;
+
+							i {
+								font-size: 33px;
+							}
+						}
+
+						&.selected {
+							border-color: black;
+							background-color: $contrastColor;
+						}
+					}
+				}
 			}
 		}
 	}

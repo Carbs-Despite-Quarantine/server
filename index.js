@@ -5,10 +5,14 @@ const app = express();
 var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 
+// A selection of Font Awesome icons suitable for profile pictures
+const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
+
 /**
  * User:
  *  - id (hash)
  *  - name (string)
+ *  - icon (string)
  *  - roomId (hash)
  *  - socket (<socket>)
  **/
@@ -87,6 +91,18 @@ function hash64() {
   return result;
 }
 
+// Returns all the icons which are not already taken
+function getAvailableIcons(roomIcons) {
+  var availableIcons = [];
+
+  icons.forEach(icon => {
+    // Add all the unused icons to the final list
+    if (!roomIcons.includes(icon))  availableIcons.push(icon);
+  });
+
+  return availableIcons;
+}
+
 /*****************
  * Web Endpoints *
  *****************/
@@ -144,18 +160,57 @@ io.on("connection", (socket) => {
   users[userId] = {
     id: userId,
     name: null,
+    icon: null,
     roomId: null,
     socket: socket
   };
 
   // Send the generated userId
   socket.emit("init", {
-    userId: userId
+    userId: userId,
+    icons: icons
   });
 
   /*****************
    * Room Handling *
    *****************/
+
+  socket.on("setIcon", (data, fn) => {
+    var user = getUser(userId);
+    if (user.error) return fn(user);
+
+    if (!icons.includes(data.icon)) return fn({error: "Invalid Icon"});
+
+    var room = getRoom(user.roomId);
+
+    // No need to check the room if it is invalid
+    if (!room.error) {
+      room.users.forEach(roomUserId => {
+        roomUser = users[roomUserId];
+
+        // Can't share an icon with another active user
+        if (roomUserId != userId && roomUser.roomId == room.id && roomUser.icon) {
+          if (roomUser.icon == data.icon) {
+            return fn({error: "Icon in use"});
+          }
+        }
+      });
+
+      // Notify users who are yet to choose an icon that the chosen icon is now unavailable
+      room.users.forEach(roomUserId => {
+        roomUser = users[roomUserId];
+
+        if (roomUserId != userId && roomUser.roomId == room.id && !roomUser.icon) {
+          roomUser.socket.emit("iconTaken", {
+            icon: data.icon
+          });
+        }
+      });
+    }
+
+    user.icon = data.icon;
+    return fn({});
+  });
 
   socket.on("createRoom", (data, fn) => {
     var user = getUser(userId);
@@ -203,6 +258,9 @@ io.on("connection", (socket) => {
     // Cache the users in the room without including the socket
     var clientUsers = {};
 
+    // Make aa list of the icons currently in use
+    var roomIcons = [];
+
     room.users.forEach(roomUserId => {
       var roomUser = users[roomUserId];
 
@@ -210,13 +268,20 @@ io.on("connection", (socket) => {
       clientUsers[roomUserId] = {
         id: roomUserId,
         name: roomUser.name,
+        icon: roomUser.icon,
         roomId: roomUser.roomId
       };
+
+      // If the user is active, add their icon to the list
+      if (roomUserId != userId && roomUser.roomId == room.id && roomUser.icon) {
+        roomIcons.push(roomUser.icon)
+      }
     });
 
     fn({
       room: room,
-      users: clientUsers
+      users: clientUsers,
+      iconChoices: getAvailableIcons(roomIcons)
     });
   });
 
@@ -247,7 +312,9 @@ io.on("connection", (socket) => {
         roomUser.socket.emit("userJoined", {
           user: {
             id: userId,
-            name: user.name
+            name: user.name,
+            icon: user.icon,
+            roomId: user.roomId
           },
           message: message
         });

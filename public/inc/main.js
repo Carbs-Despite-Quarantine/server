@@ -19,7 +19,7 @@ function getURLParam(name){
 }
 
 function resetRoomMenu() {
-  $("#set-username").show();
+  $("#select-icon").show();
   $("#set-username-submit").attr("value", "Create Room");
   window.history.pushState(null, null, window.location.href.split("?")[0]);
   room = null;
@@ -35,8 +35,14 @@ function scrollMessages() {
 function addMessage(message) {
   $("#chat-history").append(`
     <div class="msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}">
-      <h2>${users[message.userId].name}</h2>
-      <p>${message.content}</p>
+      <div class="msg-icon">
+        <i class="fas fa-${users[message.userId].icon}"></i>
+      </div>
+      <div class="msg-content">
+        <h2>${users[message.userId].name}</h2>
+        <p>${message.content}</p>
+      </div>
+
     </div>
   `);
 
@@ -48,6 +54,121 @@ function populateChat(messages) {
     addMessage(messages[messageId]);
   }
 }
+
+/*****************
+ * Icon Selector *
+ *****************/
+
+// Every unused icon
+var availableIcons = [];
+
+// The icons displayed in the icon selection panel
+var iconChoices = [];
+
+// The currently selected icon name
+var selectedIcon = null;
+
+function setIcon() {
+  if (!selectedIcon || !userId) return;
+
+ $("#select-icon").hide();
+ $("#setup-spinner").show();
+  
+  socket.emit("setIcon", {
+    icon: selectedIcon
+  }, response => {
+    $("#setup-spinner").hide();
+    if (response.error) {
+      console.error("Failed to set icon:", response.error);
+      $("#select-icon").show();
+      return;
+    }
+    $("#set-username").show();
+    users[userId].icon = selectedIcon;
+ });
+}
+
+function addIcon(name) {
+  $("#select-icon").children("#icons").append(`
+    <div class="icon ${name == selectedIcon ? "selected" : ""}" id="icon-${name}">
+      <i class="fas fa-${name}"></i>
+    </div>
+  `);
+  // Add a click listener to select the icon
+  var element = $("#icon-" + name);
+  element.click(event => {
+    var curName = element.attr("id").match(/icon-(.*)/)[1];
+
+    $(".icon").removeClass("selected");
+    element.addClass("selected");
+    selectedIcon = curName;
+
+    $("#set-icon").prop("disabled", false);
+  });
+
+  element.dblclick(event => {
+    setIcon();
+  });
+}
+
+function populateIconSelector(icons) {
+  $("#select-icon").children("#icons").empty();
+  availableIcons = icons;
+  iconChoices = [];
+
+  var maxIcons = 14;
+  if (maxIcons > icons.length) maxIcons = icons.length;
+
+  while (iconChoices.length < maxIcons) {
+    var icon = icons[Math.floor(Math.random() * icons.length)];
+    if (iconChoices.includes(icon)) continue;
+
+    iconChoices.push(icon);
+    addIcon(icon);
+  }
+
+  if (!iconChoices.includes(selectedIcon)) selectedIcon = null;
+}
+
+$("#set-icon").click(event => {
+  setIcon();
+});
+
+socket.on("iconTaken", event => {
+  var iconIndex = availableIcons.indexOf(event.icon);
+  if (iconIndex > -1) availableIcons.splice(iconIndex, 1);
+
+  iconIndex = iconChoices.indexOf(event.icon);
+  if (iconIndex > -1) iconChoices.splice(iconIndex, 1);
+
+  if (selectedIcon == event.icon) {
+    selectedIcon = null;
+    $("#set-icon").prop("disabled", true);
+  }
+
+  var iconElement = $("#icon-" + event.icon);
+  if (iconElement.length > 0) {
+    // If there are no excess avaiable items, simply hide the icon
+    if (iconChoices.length >= availableIcons.length) {
+      iconElement.hide();
+      return;
+    }
+
+    // Find a new icon to replace it
+    var newIcon;
+    while (!newIcon || iconChoices.includes(newIcon)) {
+      newIcon = availableIcons[Math.floor(Math.random() * availableIcons.length)];
+    }
+
+    iconElement.attr("id", "icon-" + newIcon);
+    iconElement.removeClass("selected");
+
+    // Replace the font awesome icon class
+    var faElement = iconElement.children("i");
+    faElement.removeClass("fa-" + event.icon);
+    faElement.addClass("fa-" + newIcon);
+  }
+});
 
 /*******************
  * Socket Handling *
@@ -73,18 +194,25 @@ socket.on("init", data => {
     socket.emit("joinRoom", {
       roomId: roomId
     }, response => {
+      $("#setup-spinner").hide();
+
       if (response.error) {
         console.warn("Failed to join room #" + roomId + ":", response.error);
         resetRoomMenu();
+        populateIconSelector(data.icons);
         return;
       }
 
+      populateIconSelector(response.iconChoices);
       console.debug("Joined room #" + roomId);
 
       users = response.users;
       room = response.room;
       populateChat(room.messages);
     });
+  } else {
+    populateIconSelector(data.icons);
+    $("#setup-spinner").hide();
   }
 });
 
@@ -109,6 +237,11 @@ window.addEventListener("beforeunload", (event) => {
  * Room Setup *
  **************/
 
+$("#username-input").keyup(event => {
+  var userName = $("#username-input").val().replace(/^\s+|\s+$/g, "");
+  $("#set-username-submit").prop("disabled", userName.length == 0);
+});
+
 $("#set-username").submit(event => {
   event.preventDefault();
 
@@ -116,7 +249,7 @@ $("#set-username").submit(event => {
   var userName = $("#username-input").val();
 
   $("#set-username").hide();
-  $("#room-spinner").show();
+  $("#setup-spinner").show();
 
   // If the user is already in a room, enter it
   if (room) {
@@ -125,7 +258,7 @@ $("#set-username").submit(event => {
       roomId: user.roomId,
       userName: userName
     }, response => {
-      $("#room-spinner").hide();
+      $("#setup-spinner").hide();
 
       if (response.error) {
         console.error("Failed to join room #" + user.roomId + ":", response.error);
@@ -144,7 +277,7 @@ $("#set-username").submit(event => {
     socket.emit("createRoom", {
       userName: userName
     }, response => {
-      $("#room-spinner").hide();
+      $("#setup-spinner").hide();
 
       if (response.error) {
         $("#set-username").show();

@@ -62,17 +62,19 @@
 			<div id="settings-panel">
 				<h1>Cards Against Humanity</h1>
 				<p>A party game for horrible people.</p><br />
-				<form id="set-username">
+				<i id="setup-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw"></i>
+				<div id="select-icon">
+					<div id="icons"></div><br />
+					<button id="set-icon" disabled>Select Icon</button>
+				</div>
+				<form id="set-username" hidden>
 					<input type="text" id="username-input" spellcheck="false" autocomplete="off" placeholder="Pick a username..." required="true" />
 					<br /><br />
-					<input type="submit" value="Create Room" id="set-username-submit" />
+					<input type="submit" value="Create Room" id="set-username-submit" disabled/>
 				</form>
-				<i id="room-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw" style="display: none;"></i>
 				<span id="create-room-success" style="display: none;">
 					<h3>Created Room!</h3>
-					<p><a href="#" id="room-link"></a></p>
-
-						<br />
+					<p><a href="#" id="room-link"></a></p><br />
 					<button id="start-game">Start Game</button>
 				</span>
 			</div>
