@@ -99,6 +99,11 @@ function hash64() {
   return result;
 }
 
+// Replace </> characters with 'safe' encoded counterparts
+function stripHTML(string) {
+  return string.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // Returns all the icons which are not already taken
 function getAvailableIcons(roomIcons) {
   var availableIcons = [];
@@ -145,7 +150,7 @@ function createMessage(userId, content, isSystemMsg) {
   var message = {
     id: msgId,
     userId: userId,
-    content: content,
+    content: stripHTML(content),
     isSystemMsg: isSystemMsg,
     timestamp: Date.now(),
     likes: {}
@@ -240,7 +245,7 @@ io.on("connection", (socket) => {
     rooms[roomId] = room;
 
     // Update the users detaiils
-    user.name = data.userName;
+    user.name = stripHTML(data.userName);
     user.roomId = roomId;
 
     // The message will be automatically added to the room
@@ -308,7 +313,7 @@ io.on("connection", (socket) => {
       return fn({error: "Can't enter room that hasn't been joined"});
     }
 
-    user.name = data.userName;
+    user.name = stripHTML(data.userName);
 
     var message = createMessage(userId, "joined the room", true);
     fn({message: message});

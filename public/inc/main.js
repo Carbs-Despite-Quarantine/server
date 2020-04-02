@@ -2,7 +2,7 @@
  * Global Variables *
  ********************/
 
-var socket = io("http://localhost:3000");
+var socket = io("https://cards.raphydaphy.com");
 
 var userId;
 
