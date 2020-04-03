@@ -2,7 +2,7 @@
  * Global Variables *
  ********************/
 
-var socket = io("https://cards.raphydaphy.com");
+var socket = io("http://localhost:3000");
 
 var userId;
 
@@ -20,7 +20,7 @@ function getURLParam(name){
 
 function resetRoomMenu() {
   $("#select-icon").show();
-  $("#set-username-submit").attr("value", "Create Room");
+  $("#set-username-submit").attr("value", "Set Username");
   window.history.pushState(null, null, window.location.href.split("?")[0]);
   room = null;
   if (users.hasOwnProperty(userId)){
@@ -124,6 +124,7 @@ function addLikes(msgId, userIds, addToMessage=true) {
       </div>
     `);
   });
+  scrollMessages();
 }
 
 function removeLike(msgId, userId) {
@@ -183,6 +184,27 @@ function populateChat(messages) {
   }
 }
 
+/**********************
+ * Expansion Selector *
+ **********************/
+
+function addExpansionSelector(id, name) {
+    $("#expansions-list").append(`
+    <div class="expansion" id="expansion-${id}">
+      <span class="expansion-name">${name}</span>
+      </div>
+  `);
+  
+  // Clicking an expansion will toggle it
+  $("#expansion-" + id).click(event => {
+    var target = $("#expansion-" + id);
+    if (target.hasClass("selected")) {
+      target.removeClass("selected");
+    } else {
+      target.addClass("selected");
+    }
+  });
+}
 /*****************
  * Icon Selector *
  *****************/
@@ -416,11 +438,29 @@ $("#set-username").submit(event => {
       user.name = userName;
 
       console.debug("Created room #" + room.id);
-      $("#create-room-success").show();
+
+      $("#room-settings").show();
+      $("#settings-title").hide();
+
+      // TODO: get expansions from server
+      var expansions = {
+        RED: "Red Box", 
+        GREEN: "Green Box", 
+        BLUE: "Blue Box", 
+        ABSURD: "Absurd Box",
+        ASS: "Ass Pack", 
+        "2000s": "2000s Nostalgia Pack", 
+        PERIOD: "Period Pack",
+        PRIDE: "Pride Pack", 
+        THEATRE: "Theatre Pack", 
+        TRUMP: "Saves America Pack"
+      };
+
+      for (var expansion in expansions) {
+        addExpansionSelector(expansion, expansions[expansion]);
+      }
 
       var roomLink = window.location.href.split("?")[0] + "?room=" + room.id;
-      $("#room-link").text(roomLink);
-      $("#room-link").attr("href", roomLink);
       window.history.pushState(null, null, roomLink);
 
       populateChat(room.messages);

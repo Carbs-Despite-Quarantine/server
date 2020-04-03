@@ -54,14 +54,16 @@
 		<div id="chat-container">
 			<h1>Chatroom</h1>
 			<div id="chat-history"></div>
-			<input type="text" id="chat-input" placeholder="Type a message">
+			<input type="text" id="chat-input" placeholder="Type a message" maxlength="256" />
 		</div>
 	</div>
 	<div id="overlay-container">
 		<div id="overlay-window">
 			<div id="settings-panel">
-				<h1>Cards Against Humanity</h1>
-				<p>A party game for horrible people.</p><br />
+				<div id="settings-title">
+					<h1>Cards Against Humanity</h1>
+					<p>A party game for horrible people.</p><br />
+				</div>
 				<i id="setup-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw"></i>
 				<div id="select-icon">
 					<div id="icons"></div><br />
@@ -72,11 +74,33 @@
 					<br /><br />
 					<input type="submit" value="Create Room" id="set-username-submit" disabled/>
 				</form>
-				<span id="create-room-success" style="display: none;">
-					<h3>Created Room!</h3>
-					<p><a href="#" id="room-link"></a></p><br />
+				<div id="room-settings" hidden>
+					<h1>Room Setup</h1>
+					<p>Adjust these settings to fine-tune your game.</p>
+					<h2>General</h2>
+					<div class="room-option-dropdown">
+						<label class="select-label">Edition</label>
+						<select id="select-edition" required>
+							<option>US</option>
+							<option>UK</option>
+							<option>Canadian</option>
+							<option selected>Australian</option>
+							<option>International</option>
+						</select>
+					</div>
+					<div class="room-option-dropdown">
+						<label class="select-label">Card Czar</label>
+						<select id="select-czar" required>
+							<option>Winner</option>
+							<option>Rotate</option>
+						</select>
+					</div>
+					<h2>Expansions</h2>
+					<div id="expansions-list">
+					</div>
+					<br />
 					<button id="start-game">Start Game</button>
-				</span>
+				</div>
 			</div>
 		</div>
 	</div>

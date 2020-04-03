@@ -447,7 +447,6 @@ input[type=text] {
 }
 
 $overlayWidth: 450px;
-$overlayHeight: 300px;
 
 #overlay-container {
 	position: fixed;
@@ -480,6 +479,10 @@ $overlayHeight: 300px;
 			text-align: center;
 			align: center;
 
+			input {
+				outline-y: none;
+			}
+
 			input[type=text] {
 				width: 250px;
 				border-bottom-width: 4px;
@@ -497,7 +500,6 @@ $overlayHeight: 300px;
 				margin: 10px;
 				text-decoration: none;
 				cursor: pointer;
-				outline: none;
 
 				&:disabled {
 					cursor: not-allowed;
@@ -536,6 +538,116 @@ $overlayHeight: 300px;
 							i {
 								font-size: 33px;
 							}
+						}
+
+						&.selected {
+							border-color: black;
+							background-color: $contrastColor;
+						}
+					}
+				}
+			}
+
+			#room-settings {
+				max-height: 1000px;
+				transition: max-height 0.5s cubic-bezier(0, 1, 0, 1);
+
+				@media only screen and (max-height: 600px) {
+					max-height: 400px;
+					overflow-y: scroll;
+
+					scrollbar-width: thin;
+					scrollbar-color: $contrastColor $outlineColor;
+
+					transition: max-height 0.5s cubic-bezier(0, 1, 0, 1);
+
+					&::-webkit-scrollbar {
+					  width: 4px;
+					}
+
+					&::-webkit-scrollbar-thumb {
+					  border-radius: 0px;
+					  background-color: $contrastColor;
+					}
+
+					&::-webkit-scrollbar-track {
+					  border-radius: 0px;
+					  background-color: $outlineColor;
+					}
+				}
+
+				.room-option-dropdown {
+					display: flex;
+					justify-content: center;
+					margin: 10px 0;
+
+					.select-label {
+						padding: 10px;
+						font-weight: 700;
+						width: 19%;
+						text-align: right;
+					}
+
+					select {
+						display: inline;
+						font-size: 1em;
+						font-family: $font;
+						font-weight: 700;
+						padding: 8px 12px;
+						width: 60%;
+						max-width: 100%;
+						box-sizing: border-box;
+						border: 3px solid $iconBackground;
+						border-radius: .5em;
+						outline: none;
+						-moz-appearance: none;
+						-webkit-appearance: none;
+						appearance: none;
+						background-color: $iconBackground;
+						background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239c9c9c%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+						background-repeat: no-repeat, repeat;
+						background-position: right .7em top 50%, 0 0;
+						background-size: .65em auto, 100%;
+
+						&::-ms-expand {
+							display: none;
+						}
+
+						&:hover {
+							border-color: $outlineColor;
+						}
+
+						& option {
+							font-weight: normal;
+							border: none;
+							outline: none;
+
+							&::hover {
+								background-color: green;
+							}
+						}
+					}
+				}
+
+				#expansions-list {
+					display: flex;
+					flex-wrap: wrap;
+					justify-content: center;
+
+					.expansion {
+						padding: 8px 7px;
+						margin: 3px;
+						border: 3px solid $iconBackground;
+						background-color: $iconBackground;
+						border-radius: 10px;
+						cursor: pointer;
+
+						&:hover, &.selected {
+							border-color: $outlineColor;
+						}
+
+						&:hover {
+							border-width: 3px;
 						}
 
 						&.selected {
