@@ -35,7 +35,7 @@ CREATE table white_cards_link (
 
 CREATE TABLE users (
 	id INT NOT NULL AUTO_INCREMENT,
-	name VARCHAR(8),
+	name VARCHAR(16),
 	icon VARCHAR(16),
 	PRIMARY KEY (id)
 );
@@ -46,22 +46,54 @@ CREATE TABLE rooms (
 	PRIMARY KEY (id)
 );
 
+CREATE TABLE messages (
+	id INT NOT NULL AUTO_INCREMENT,
+	room_id INT NOT NULL,
+	user_id INT NOT NULL,
+	content VARCHAR(256) NOT NULL,
+	system_msg BOOLEAN DEFAULT FALSE,
+	sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	FOREIGN KEY (room_id)
+		REFERENCES rooms (id)
+		ON DELETE CASCADE
+);
+
+CREATE TABLE message_likes (
+	message_id INT NOT NULL,
+	user_id INT NOT NULL,
+	added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (message_id, user_id),
+	FOREIGN KEY (message_id)
+		REFERENCES messages (id)
+		ON DELETE CASCADE
+);
+
 CREATE TABLE room_users (
 	user_id INT NOT NULL,
 	room_id INT NOT NULL,
-	PRIMARY KEY (user_id, room_id)
+	PRIMARY KEY (user_id, room_id),
+	FOREIGN KEY (room_id)
+		REFERENCES rooms (id)
+		ON DELETE CASCADE
 );
 
 CREATE TABLE room_black_cards (
 	room_id INT NOT NULL,
 	card_id INT NOT NULL,
-	PRIMARY KEY (room_id, card_id)
+	PRIMARY KEY (room_id, card_id),
+	FOREIGN KEY (room_id)
+		REFERENCES rooms (id)
+		ON DELETE CASCADE
 );
 
 CREATE TABLE room_white_cards (
 	room_id INT NOT NULL,
 	card_id INT NOT NULL,
-	PRIMARY KEY (room_id, card_id)
+	PRIMARY KEY (room_id, card_id),
+	FOREIGN KEY (room_id)
+		REFERENCES rooms (id)
+		ON DELETE CASCADE
 );
 
 INSERT INTO versions (id, name, type) VALUES

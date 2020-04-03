@@ -19,22 +19,6 @@ const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", 
  **/
 var users = {}
 
-/**
- * Room:
- *  - id (int)
- *  - users (hash[])
- *  - messages:
- *     - id (hash)
- *     - userId (hash)
- *     - content (string)
- *     - isSystemMsg (bool)
- *     - timestamp (int)
- *     - likes:
- *        - userId (hash)
- *        - timestamp (int)
- **/
-var rooms = {}
-
 /*******************
  * Data Validation *
  *******************/
@@ -91,12 +75,7 @@ function getBlackCard(edition) {
 }
 
 function setUserIcon(userId, icon) {
-  var sql = `
-    UPDATE users
-    SET icon = ?
-    WHERE id = ?;
-  `;
-  db.query(sql, [
+  db.query(`UPDATE users SET icon = ? WHERE id = ?;`, [
     icon,
     userId
   ],(err, result) => {
@@ -106,12 +85,7 @@ function setUserIcon(userId, icon) {
 }
 
 function setUserName(userId, name) {
-  var sql = `
-    UPDATE users
-    SET name = ?
-    WHERE id = ?;
-  `;
-  db.query(sql, [
+  db.query(`UPDATE users SET name = ? WHERE id = ?;`, [
     name,
     userId
   ],(err, result) => {
@@ -121,8 +95,7 @@ function setUserName(userId, name) {
 }
 
 function addUserToRoom(userId, roomId) {
-  var sql = `INSERT INTO room_users (user_id, room_id) VALUES (?, ?);`;
-  db.query(sql, [
+  db.query(`INSERT INTO room_users (user_id, room_id) VALUES (?, ?);`, [
     userId,
     roomId
   ], (err, result) => {
@@ -131,35 +104,125 @@ function addUserToRoom(userId, roomId) {
   });
 }
 
+function getRoomUsers(roomId, fn) {
+  var sql = `
+    SELECT id, name, icon
+    FROM users 
+    WHERE id IN (
+      SELECT user_id
+      FROM room_users
+      WHERE room_id = ?
+    );
+  `;
+  db.query(sql, [
+    roomId
+  ],(err, results, fields) => {
+    if (err) {
+      console.warn("Failed to get users for room #" + roomId + ":", err);
+      return fn({error: err});
+    }
+
+    var roomUsers = {};
+    var roomUserIds = [];
+
+    // Convert arrays to objects (TODO: efficiency?)
+    results.forEach(row => {
+      roomUserIds.push(row.id);
+      roomUsers[row.id] = {
+        id: row.id,
+        name: row.name,
+        icon: row.icon
+      };
+    });
+    fn({users: roomUsers, userIds: roomUserIds});
+  });
+}
+
+function getRoomMessages(roomId, limit, fn) {
+  var sql = `
+    SELECT 
+      msg.id, 
+      msg.user_id AS userId, 
+      msg.content, 
+      msg.system_msg AS isSystemMsg, 
+      GROUP_CONCAT(likes.user_id SEPARATOR ',') AS likes
+    FROM messages msg
+    LEFT JOIN message_likes likes ON msg.id = likes.message_id
+    WHERE room_id = ?
+    GROUP BY msg.id
+    ORDER BY msg.id DESC
+    LIMIT ?;`;
+  db.query(sql, [
+    roomId,
+    limit
+  ],(err, results, fields) => {
+    if (err) {
+      console.warn("Failed to get messages for room #" + roomId + ":", err);
+      return fn({error: err});
+    }
+    var roomMessages = {};
+
+    results.forEach(row => {
+      roomMessages[row.id] = {
+        id: row.id,
+        userId: row.userId,
+        content: row.content,
+        isSystemMsg: row.isSystemMsg,
+        likes: row.likes ? row.likes.split(",") : []
+      }
+    });
+    fn({messages: roomMessages});
+  });  
+}
+
+function createMessage(userId, content, isSystemMsg, fn) {
+  var user = getUser(userId);
+  if (user.error) return fn(user);
+  if (!validateString(content)) return fn({error: "Invalid Message"});
+
+  content = stripHTML(content);
+
+  // Try to insert the message into the database
+  db.query(`INSERT INTO messages (room_id, user_id, content, system_msg) VALUES (?, ?, ?, ?);`, [
+    user.roomId,
+    userId,
+    content,
+    isSystemMsg
+  ], (err, result) => {
+    if (err) {
+      console.warn("Failed to create message:", err);
+      return fn({error: err});
+    }
+    var msgId = result.insertId;
+
+    // Create an object to represent the message on the client
+    fn({
+      id: msgId,
+      userId: userId,
+      content: content,
+      isSystemMsg: isSystemMsg,
+      likes: []
+    });
+  });
+}
+
+function deleteRoom(roomId) {
+  db.query(`DELETE FROM rooms WHERE id = ?;`, [
+    roomId
+  ], (err, result) => {
+    if (err) return console.warn("Failed to delete room #" + roomId + ":", err);
+    console.log("Deleted room #" + roomId);
+  });
+}
+
 /***************
  * Data Lookup *
  ***************/
 
-function getUser(userId) {
+function getUser(userId, requireRoom=false) {
   if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
+  if (requireRoom && !users[userId].roomId) return {error: "Not in a room"};
   return users[userId];
-}
-
-function getRoom(roomId) {
-  if (!rooms.hasOwnProperty(roomId)) return {error: "Invalid Room ID"};
-  return rooms[roomId];
-}
-
-function getMessage(room, msgId) {
-  if (!room.messages.hasOwnProperty(msgId)) return {error: "Invalid Message ID"};
-  return room.messages[msgId];
-}
-
-function getUserAndRoom(userId) {
-  var user = getUser(userId);
-  if (user.error) return {error: user.error};
-
-  if (!user.roomId || user.roomId == 0) return {error: "Not in a room"};
-
-  var room = getRoom(user.roomId);
-  if (room.error) return {error: room.error};
-
-  return {user: user, room: room};
 }
 
 /********************
@@ -210,34 +273,6 @@ app.get("/status", (req, res) => {
   res.end("OK");
 });
 
-/***************
- * Chat System *
- ***************/
-
-function createMessage(userId, content, isSystemMsg) {
-  var info = getUserAndRoom(userId);
-  if (info.error) return info;
-  if (!validateString(content)) return {error: "Invalid Message"};
-
-  // Generate an ID for the message
-  var msgId = hash64();
-  while (info.room.messages.hasOwnProperty(msgId)) msgId = hash64();
-
-  // Create the message
-  var message = {
-    id: msgId,
-    userId: userId,
-    content: stripHTML(content),
-    isSystemMsg: isSystemMsg,
-    timestamp: Date.now(),
-    likes: {}
-  };
-
-  // Add the message to the room and return it
-  info.room.messages[msgId] = message;
-  return message;
-}
-
 /*******************
  * Socket Handling *
  *******************/
@@ -256,35 +291,43 @@ function initSocket(socket, userId) {
 
     setUserIcon(userId, data.icon);
 
-    var room = getRoom(user.roomId);
+    if (user.roomId) {
+      getRoomUsers(user.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get room users when setting icon:", response.error);
+          return fn({error: "Room error"});
+        }
 
-    // No need to check the room if it is invalid
-    if (!room.error) {
-      room.users.forEach(roomUserId => {
-        roomUser = users[roomUserId];
+        response.userIds.forEach(roomUserId => {
+          roomUser = response.users[roomUserId];
 
-        // Can't share an icon with another active user
-        if (roomUserId != userId && roomUser.roomId == room.id && roomUser.icon) {
-          if (roomUser.icon == data.icon) {
-            return fn({error: "Icon in use"});
+          // Can't share an icon with another active user
+          if (roomUserId != userId && users.hasOwnProperty[roomUserId] && users[roomUserId].roomId == user.roomId && roomUser.icon) {
+            if (roomUser.icon == data.icon) {
+              return fn({error: "Icon in use"});
+            }
           }
-        }
-      });
+        });
 
-      // Notify users who are yet to choose an icon that the chosen icon is now unavailable
-      room.users.forEach(roomUserId => {
-        roomUser = users[roomUserId];
+        user.icon = data.icon;
+        fn({});
 
-        if (roomUserId != userId && roomUser.roomId == room.id && !roomUser.icon) {
-          roomUser.socket.emit("iconTaken", {
-            icon: data.icon
-          });
-        }
+        // Notify users who are yet to choose an icon that the chosen icon is now unavailable
+        response.userIds.forEach(roomUserId => {
+          if (!users.hasOwnProperty(roomUserId)) return;
+          socketUser = users[roomUserId];
+
+          if (roomUserId != userId && socketUser.roomId == user.roomId && !response.users[roomUserId].icon) {
+            socketUser.socket.emit("iconTaken", {
+              icon: data.icon
+            });
+          }
+        });
       });
+    } else {
+      user.icon = data.icon;
+      return fn({});
     }
-
-    user.icon = data.icon;
-    return fn({});
   });
 
   socket.on("createRoom", (data, fn) => {
@@ -293,14 +336,14 @@ function initSocket(socket, userId) {
 
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    var sql = `INSERT INTO rooms (edition) VALUES (?)`;
-    db.query(sql, [
+    db.query(`INSERT INTO rooms (edition) VALUES (?);`, [
       "AU"
     ], (err, result) => {
       if (err) {
         console.warn("Failed to create room:", err);
         return fn({error: err});
       }
+
       var roomId = result.insertId;
       addUserToRoom(userId, roomId);
 
@@ -310,7 +353,6 @@ function initSocket(socket, userId) {
         users: [userId],
         messages: {}
       };
-      rooms[roomId] = room;
 
       // Update the users detaiils
       user.name = stripHTML(data.userName);
@@ -318,13 +360,15 @@ function initSocket(socket, userId) {
 
       setUserName(userId, user.name);
 
-      // The message will be automatically added to the room
-      createMessage(userId, "created the room", true);
+      // Wait for the join message to be created before sending a response
+      createMessage(userId, "created the room", true, message => {
+        if (message.error) console.warn("Failed to create join message:", message.error);
+        console.log("Created room #" + roomId + " for user #" + userId);
 
-      console.log("Created room #" + roomId + " for user #" + userId);
-
-      // Send the roomId to the user
-      fn({room: room});
+        // Add the creation message to the room and send it to the client
+        room.messages[message.id] = message;
+        fn({room: room});
+      });
     });
   });
 
@@ -333,126 +377,156 @@ function initSocket(socket, userId) {
     var user = getUser(userId);
     if (user.error) return fn(user);
 
-    var room = getRoom(data.roomId);
-    if (room.error) return fn(room);
-
-    // Add the user to the room
-    user.roomId = data.roomId;
-    room.users.push(userId);
-    addUserToRoom(userId, data.roomId);
-
-    // Cache the users in the room without including the socket
-    var clientUsers = {};
-
-    // Make aa list of the icons currently in use
-    var roomIcons = [];
-
-    room.users.forEach(roomUserId => {
-      var roomUser = users[roomUserId];
-
-      // Add the user to the list
-      clientUsers[roomUserId] = {
-        id: roomUserId,
-        name: roomUser.name,
-        icon: roomUser.icon,
-        roomId: roomUser.roomId
-      };
-
-      // If the user is active, add their icon to the list
-      if (roomUserId != userId && roomUser.roomId == room.id && roomUser.icon) {
-        roomIcons.push(roomUser.icon)
+    // Do this before getting messages since it doubles as a check for room validity
+    getRoomUsers(data.roomId, response => {
+      if (response.error) {
+        console.warn("Failed to get user ids when joining room #" + data.roomId + ":", response.error);
+        return fn({error: err});
+      } if (response.userIds == 0) {
+        return fn({error: "Can't join empty or invalid room"});
       }
-    });
 
-    fn({
-      room: room,
-      users: clientUsers,
-      iconChoices: getAvailableIcons(roomIcons)
+      // Cache the user lists so wse can reuse the response variable
+      var roomUsers = response.users;
+      var roomUserIds = response.userIds;
+
+      // Add the client to the user list
+      roomUsers[userId] = {
+        id: userId,
+        icon: user.icon,
+        name: user.name,
+        roomId: data.roomId
+      };
+      roomUserIds.push(userId);
+
+      getRoomMessages(data.roomId, 15, response => {
+        var messages;
+        if (response.error) {
+          console.warn("failed to get latest messages from room #" + data.roomId + ": " + response.error);
+          messages = {};
+        } else {
+          messages = response.messages;
+        }
+
+        // Add the user to the room
+        user.roomId = data.roomId;
+        addUserToRoom(userId, data.roomId);
+
+        // Make aa list of the icons currently in use
+        var roomIcons = [];
+
+        roomUserIds.forEach(roomUserId => {
+          var roomUser = roomUsers[roomUserId];
+          // If the user is active, add their icon to the list
+          if (roomUserId != userId && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == data.roomId && roomUser.icon) {
+            roomIcons.push(roomUser.icon)
+          }
+        });
+
+        fn({
+          room: {
+            id: data.roomId,
+            users: roomUserIds,
+            messages: messages
+          },
+          users: roomUsers,
+          iconChoices: getAvailableIcons(roomIcons)
+        });
+      });
     });
   });
 
   // Called when the users presses the "Join Room" button after setting their username
   socket.on("enterRoom", (data, fn) => {
-    var user = getUser(userId);
+    var user = getUser(userId, true);
     if (user.error) return fn(user);
 
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    var room = getRoom(data.roomId);
-    if (room.error) return fn(room);
-
-    if (user.roomId != room.id || !room.users.includes(userId)) {
-      return fn({error: "Can't enter room that hasn't been joined"});
-    }
-
-    user.name = stripHTML(data.userName);
-    setUserName(userId, user.name);
-
-    var message = createMessage(userId, "joined the room", true);
-    fn({message: message});
-
-    room.users.forEach(roomUserId => {
-      var roomUser = users[roomUserId];
-
-      // Send the new users info to all other active room users
-      if (roomUserId != userId && roomUser.roomId == room.id) {
-        roomUser.socket.emit("userJoined", {
-          user: {
-            id: userId,
-            name: user.name,
-            icon: user.icon,
-            roomId: user.roomId
-          },
-          message: message
-        });
+    getRoomUsers(data.roomId, response => {
+      if (response.error) {
+        console.warn("Failed to get user list for room #" + data.roomId + ":", response.error);
+        return fn({error: "Unexpected error"});
+      } else if (response.userIds.length == 0) {
+        return fn({error: "Invalid Room"});
+      } else if (!response.userIds.includes(userId)) {
+        return fn({error: "Can't enter room that hasn't been joined"});
       }
+
+      user.name = stripHTML(data.userName);
+      setUserName(userId, user.name);
+
+      createMessage(userId, "joined the room", true, message => {
+        fn({message: message});
+
+        response.userIds.forEach(roomUserId => {
+          if (!users.hasOwnProperty(roomUserId)) return;
+          var socketUser = users[roomUserId];
+
+          // Send the new users info to all other active room users
+          if (roomUserId != userId && socketUser.roomId == data.roomId) {
+            socketUser.socket.emit("userJoined", {
+              user: {
+                id: userId,
+                name: user.name,
+                icon: user.icon,
+                roomId: user.roomId
+              },
+              message: message
+            });
+          }
+        });
+      });
     });
   });
 
   socket.on("userLeft", (data) => {
-    var info = getUserAndRoom(userId);
-    if (info.error) return;
+    var user = getUser(userId);
+    if (user.error) return;
 
     var activeUsers = 0;
 
-    // If the user never entered the room, don't inform users of leave
-    if (!info.user.name) {
-      // We have to do this twice to prevent users who haven't entered leaving the room open indefinitely
-      info.room.users.forEach(roomUserId => {
-        if (roomUserId != userId && users[roomUserId].roomId == info.room.id) activeUsers++;
-      });
-      if (activeUsers == 0) {
-        console.log("Deleting room #" + info.room.id + " because all users have left");
-        delete rooms[info.room.id];
-      }
+    getRoomUsers(user.roomId, response => {
+      if (response.error) return console.warn("Failed to get user list when leaving room:", response.error);
+      else if (response.userIds.length == 0) {
+        user.roomId = null;
+        return;
+      };
 
-      // If we aren't returning here, we still need the roomId for createMessage()
-      info.user.roomId = null;
-      return;
-    }
-
-    var message = createMessage(userId, "left the room", true);
-
-    info.room.users.forEach(roomUserId => {
-      var roomUser = users[roomUserId];
-
-      // Notify active users that the user left
-      if (roomUserId != userId && roomUser.roomId == info.room.id) {
-        activeUsers++;
-        roomUser.socket.emit("userLeft", {
-          userId: userId,
-          message: message
+      // If the user never entered the room, don't inform users of leave
+      if (!response.users[userId].name) {
+        // We have to do this twice to prevent users who haven't entered leaving the room open indefinitely
+        response.userIds.forEach(roomUserId => {
+          if (roomUserId != userId && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == user.roomId) activeUsers++;
         });
+
+        if (activeUsers == 0) deleteRoom(user.roomId);
+
+        // If we aren't returning here, we still need the roomId for createMessage()
+        user.roomId = null;
+        return;
       }
+
+      createMessage(userId, "left the room", true, message => {
+          response.userIds.forEach(roomUserId => {
+          if (!users.hasOwnProperty(roomUserId)) return;
+          var socketUser = users[roomUserId];
+
+          // Notify active users that the user left
+          if (roomUserId != userId && socketUser.roomId == user.roomId) {
+            activeUsers++;
+            socketUser.socket.emit("userLeft", {
+              userId: userId,
+              message: message
+            });
+          }
+        });
+
+        // Delete the room once all users have left
+        if (activeUsers == 0) deleteRoom(user.roomId);
+        user.roomId = null;
+      });
     });
-
-    // Delete the room once all users have left
-    if (activeUsers == 0) {
-      console.log("Deleting room #" + info.room.id + " because all users have left");
-      delete rooms[info.room.id];
-    }
-
-    info.user.roomId = null;
   });
 
   /***************
@@ -460,69 +534,109 @@ function initSocket(socket, userId) {
    ***************/
 
   socket.on("chatMessage", (data, fn) => {
-    var info = getUserAndRoom(userId);
-    if (info.error) return fn(info);
+    var user = getUser(userId);
+    if (user.error) return fn(user);
     if (!validateString(data.content)) return fn({error: "Invalid Message"});
 
-    var message = createMessage(userId, data.content, false);
+    createMessage(userId, data.content, false, message => {
+      fn({message: message});
 
-    fn({message: message});
+      getRoomUsers(user.roomId, response => {
+        if (response.error) return console.warn("Failed to get room users:", response.error);
+        response.userIds.forEach(roomUserId => {
+          if (!users.hasOwnProperty(roomUserId)) return;
+          var socketUser = users[roomUserId];
 
-    info.room.users.forEach(roomUserId => {
-      var roomUser = users[roomUserId];
-
-      // Send the message to other active users
-      if (roomUserId != userId && roomUser.roomId == info.room.id) {
-        roomUser.socket.emit("chatMessage", {message: message});
-      }
+          // Send the message to other active users
+          if (roomUserId != userId && socketUser.roomId == user.roomId) {
+            socketUser.socket.emit("chatMessage", {message: message});
+          }
+        });
+      });
     });
   });
 
   socket.on("likeMessage", (data, fn) => {
-    var info = getUserAndRoom(userId);
-    if (info.error) return fn(info);
+    var user = getUser(userId);
+    if (user.error) return fn(user);
+    if (!user.roomId) return fn({error: "Not in a room"});
 
-    var message = getMessage(info.room, data.msgId);
-    if (message.error) return fn(message);
-    if (message.isSystemMsg) return fn({error: "Can't like system messages"});
-    if (message.likes.hasOwnProperty(userId)) return fn({error: "Can't like a message twice!"});
-
-    var like = {
-      userId: userId,
-      timestamp: Date.now()
-    };
-
-    message.likes[userId] = like;
-    fn({like: like});
-
-    info.room.users.forEach(roomUserId => {
-      var roomUser = users[roomUserId];
-
-      // Send the like information to other active users
-      if (roomUserId != userId && roomUser.roomId == info.room.id) {
-        roomUser.socket.emit("likeMessage", {msgId: message.id, like: like});
+    // We need to check that the user is actually in the room 
+    // where the message was sent and, that it isn't a system message
+    var sql = `
+      SELECT system_msg 
+      FROM messages 
+      WHERE id = ? AND room_id = ?;
+    `;
+    db.query(sql, [
+      data.msgId,
+      user.roomId
+    ],(err, msgInfo, fields) => {
+      if (err) {
+        console.warn("Failed to get msg #" + data.msgId + ":", err);
+        return fn({error: err});
+      } else if (msgInfo.length == 0) {
+        return fn({error: "Invalid Message ID"});
+      } else if (msgInfo[0].system_msg == 1) {
+        return fn({error: "Can't like a system message"});
       }
+
+      // Now we can actually add the like
+      db.query(`INSERT INTO message_likes (message_id, user_id) VALUES (?, ?);`, [
+        data.msgId,
+        userId
+      ], (err, insertResult) => {
+        if (err) {
+          console.warn("Failed to add like:", err);
+          return fn({error: err});
+        }
+        fn({});
+
+        getRoomUsers(user.roomId, response => {
+          if (response.error) return console.warn("Failed to get room user ids:", response.error);
+          response.userIds.forEach(roomUserId => {
+            if (!users.hasOwnProperty(roomUserId)) return;
+            var socketUser = users[roomUserId];
+
+            // Send the like information to other active users
+            if (roomUserId != userId && socketUser.roomId == user.roomId) {
+              socketUser.socket.emit("likeMessage", {msgId: data.msgId, userId: userId});
+            }
+          });
+        });
+      });
     });
   });
 
   socket.on("unlikeMessage", (data, fn) => {
-    var info = getUserAndRoom(userId);
-    if (info.error) return fn(info);
+    var user = getUser(userId);
+    if (user.error) return fn(user);
+    if (!user.roomId) return fn({error: "Not in a room!"});
 
-    var message = getMessage(info.room, data.msgId);
-    if (message.error) return fn(message);
-    if (!message.likes.hasOwnProperty(userId)) return fn({error: "Can't unlike a message that hasn't been liked!"});
-
-    delete message.likes[userId];
-    fn({});
-
-    info.room.users.forEach(roomUserId => {
-      var roomUser = users[roomUserId];
+    db.query(`DELETE FROM message_likes WHERE message_id = ? AND user_id = ?;`, [
+      data.msgId,
+      userId
+    ], (err, result) => {
+      if (err) {
+        console.warn("Failed to remove like:", err);
+        return fn({error: err});
+      } else if (result.affectedRows == 0) {
+        return fn({error: "Can't unlike a message that hasn't been liked!"})
+      }
+      fn({});
 
       // Inform other active users that the like was removed
-      if (roomUserId != userId && roomUser.roomId == info.room.id) {
-        roomUser.socket.emit("unlikeMessage", {msgId: message.id, userId: userId});
-      }
+      getRoomUsers(user.roomId, response => {
+        if (response.error) return console.warn("Failed to get room user ids:", response.error);
+        response.userIds.forEach(roomUserId => {
+          if (!users.hasOwnProperty(roomUserId)) return;
+          var socketUser = users[roomUserId];
+
+          if (roomUserId != userId && socketUser.roomId == user.roomId) {
+            socketUser.socket.emit("unlikeMessage", {msgId: data.msgId, userId: userId});
+          }
+        });
+      });
     });
   });
 }
@@ -530,15 +644,13 @@ function initSocket(socket, userId) {
 io.on("connection", (socket) => {
 
   // Add user to the database
-  var sql = `INSERT INTO users VALUES ()`;
-  db.query(sql, (err, result) => {
+  db.query(`INSERT INTO users VALUES ();`, (err, result) => {
     if (err) {
       console.warn("Failed to create user:", err);
       return;
     }
 
     var userId = result.insertId;
-    console.log("Created user #" + userId);
 
      // Save the users details
     users[userId] = {

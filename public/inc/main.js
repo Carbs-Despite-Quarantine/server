@@ -38,10 +38,7 @@ function likeMessage(message) {
     msgId: message.id
   }, response => {
     if (response.error) return console.warn("Failed to like message #" + message.id + ":", response.error);
-    if (!response.like) return;
-    addLikes(message.id, {
-      [userId]: response.like
-    });
+    addLikes(message.id, [userId]);
   });
 }
 
@@ -58,7 +55,7 @@ function clearLikesDiv(likesDiv, msgId) {
   // Listen for clicks on the heart icon
   likesDiv.children(".msg-heart").first().click(event => {
     // Remove like if already added
-    if (message.likes.hasOwnProperty(userId)) {
+    if (message.likes.includes(userId)) {
       socket.emit("unlikeMessage", {
         msgId: msgId
       }, response => {
@@ -95,7 +92,7 @@ function getOrCreateLikesDiv(msgId) {
   return contentDiv.children(".msg-likes").first();
 }
 
-function addLikes(msgId, likes, addToMessage=true) {
+function addLikes(msgId, userIds, addToMessage=true) {
   if (!room.messages.hasOwnProperty(msgId)) {
     console.warn("Tried to add likes to untracked message #", msgId);
     return;
@@ -106,29 +103,27 @@ function addLikes(msgId, likes, addToMessage=true) {
     return;
   }
   var message = room.messages[msgId];
-  for (var likeUserId in likes) {
-    if (!users.hasOwnProperty(likeUserId)) {
-      console.warn("Recieved like from invalid user #" + likeUserId);
-      continue;
-    } else if (message.likes.hasOwnProperty(likeUserId) && addToMessage) {
-      console.warn("User #" + likeUserId + " tried to like message #" + msgId + " twice!");
-      continue;
+  userIds.forEach(likeId => {
+    if (!users.hasOwnProperty(likeId)) {
+      return console.warn("Recieved like from invalid user #" + likeId);
+    } else if (message.likes.includes(likeId) && addToMessage) {
+      return console.warn("User #" + likeId + " tried to like message #" + msgId + " twice!");
     }
-    if (addToMessage) message.likes[likeUserId] = likes[likeUserId];
-    if (likeUserId == userId) {
+    if (addToMessage) message.likes.push(likeId);
+    if (likeId == userId) {
       var heart = likesDiv.children(".msg-heart").first().children("i").first();
 
       // Replace the empty heart with a full heart
       heart.removeClass("far");
       heart.addClass("fas");
     }
-    var user = users[likeUserId];
+    var user = users[likeId];
     likesDiv.append(`
       <div class="msg-like">
         <i class="fas fa-${user.icon}" title="Liked by ${user.name}"></i>
       </div>
     `);
-  }
+  });
 }
 
 function removeLike(msgId, userId) {
@@ -141,7 +136,10 @@ function removeLike(msgId, userId) {
     console.warn("Failed to remove a like from message #", msgId);
   }
   var message = room.messages[msgId];
-  delete message.likes[userId];
+  var likeIndex = message.likes.indexOf(userId);
+  if (likeIndex > -1) message.likes.splice(likeIndex, 1);
+
+  console.log("wee");
 
   // Simply delete the likes div if this was the last like
   if (Object.keys(message.likes).length == 0) {
@@ -216,6 +214,7 @@ function setIcon() {
       return;
     }
     $("#set-username").show();
+    console.log("users", users);
     users[userId].icon = selectedIcon;
  });
 }
@@ -471,7 +470,7 @@ socket.on("chatMessage", data => {
 });
 
 socket.on("likeMessage", data => {
-  if (data.msgId && data.like) addLikes(data.msgId, {[data.like.userId]: data.like});
+  if (data.msgId && data.userId) addLikes(data.msgId, [data.userId]);
 });
 
 socket.on("unlikeMessage", data => {
