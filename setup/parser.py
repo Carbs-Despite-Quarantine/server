@@ -91,6 +91,8 @@ for whiteCard in whiteCards:
 
 output = open("generated.sql", "w")
 
+output.write("USE `cah-online`;\n")
+
 output.write("INSERT INTO black_cards (id, pack, text, draw, pick) VALUES ")
 output.write(", ".join(blackCardsSQL))
 output.write(";\n")

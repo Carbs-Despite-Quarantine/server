@@ -1,3 +1,5 @@
+USE `cah-online`;
+
 CREATE table versions (
 	id VARCHAR(8) NOT NULL,
 	name VARCHAR(32) NOT NULL,
@@ -109,18 +111,4 @@ INSERT INTO versions (id, name, type) VALUES
 	( 'BLUE', 'Blue Box', 'box' ),
 	( 'ABSURD', 'Absurd Box', 'box' ),
 	( 'PROC', 'Procedural Box', 'box' )
-;
-
-INSERT INTO black_cards (id, pack, text, draw, pick) VALUES 
-	(0, 'base', '______ + ______ = ______.', 2, 3),
-	(1, 'base', '______ is a slippery slope that leads to ______.', 0, 2),
-	(2, 'base', '______ would be woefully incomplete without ______.', 0, 2),
-	(3, 'base', '______: good to the last drop.', 0, 1)
-;
-
-INSERT INTO black_cards_link (card_id, edition) VALUES
-	(0, 'US'), (0, 'UK'), (0, 'CA'), (0, 'AU'), (0, 'KS'),
-	(1, 'US'), (1, 'UK'), (1, 'CA'), (1, 'AU'), (1, 'KS'),
-	(2, 'INTL'),
-	(3, 'KS')
 ;
