@@ -2,7 +2,7 @@
  * Global Variables *
  ********************/
 
-var socket = io("http://localhost:3000");
+var socket = io("https://cards.raphydaphy.com");
 
 var userId;
 
@@ -139,8 +139,6 @@ function removeLike(msgId, userId) {
   var likeIndex = message.likes.indexOf(userId);
   if (likeIndex > -1) message.likes.splice(likeIndex, 1);
 
-  console.log("wee");
-
   // Simply delete the likes div if this was the last like
   if (Object.keys(message.likes).length == 0) {
     likesDiv.remove();
@@ -214,7 +212,6 @@ function setIcon() {
       return;
     }
     $("#set-username").show();
-    console.log("users", users);
     users[userId].icon = selectedIcon;
  });
 }

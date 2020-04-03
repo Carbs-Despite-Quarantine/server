@@ -6,6 +6,7 @@ $cardHeight: 378px;
 $cardSpacing: 2px;
 
 $handWidth: 7 * ($cardWidth * $cardScale + 2 * $cardSpacing);
+$minHandMargin: 400px;
 
 $outlineColor: #9c9c9c;
 $contrastColor: #ffd200;
@@ -84,7 +85,7 @@ input[type=text] {
 		z-index: 5;
 		padding: 10px;
 
-		@media only screen and (max-width: $handWidth + 270px) {
+		@media only screen and (max-width: $handWidth + $minHandMargin) {
 			right: 0;
 			top: 0;
 			border-top: 0;
@@ -267,7 +268,7 @@ input[type=text] {
 			border-bottom: none;
 			transition: $resizeTransition;
 
-			@media only screen and (max-width: $handWidth + 270px) {
+			@media only screen and (max-width: $handWidth + $minHandMargin) {
 				width: 100%;
 				left: 0;
 				right: 0;
@@ -310,7 +311,7 @@ input[type=text] {
 			top: 10%;
 			transition: $resizeTransition;
 
-			@media only screen and (max-width: $handWidth + 270px) {
+			@media only screen and (max-width: $handWidth + $minHandMargin) {
 				left: 20px;
 				top: 20px;
 				transition: $resizeTransition;
