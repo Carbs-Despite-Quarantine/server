@@ -33,6 +33,37 @@ CREATE table white_cards_link (
   PRIMARY KEY(card_id, edition)
 );
 
+CREATE TABLE users (
+	id INT NOT NULL AUTO_INCREMENT,
+	name VARCHAR(8),
+	icon VARCHAR(16),
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE rooms (
+	id INT NOT NULL AUTO_INCREMENT,
+	edition VARCHAR(8) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE room_users (
+	user_id INT NOT NULL,
+	room_id INT NOT NULL,
+	PRIMARY KEY (user_id, room_id)
+);
+
+CREATE TABLE room_black_cards (
+	room_id INT NOT NULL,
+	card_id INT NOT NULL,
+	PRIMARY KEY (room_id, card_id)
+);
+
+CREATE TABLE room_white_cards (
+	room_id INT NOT NULL,
+	card_id INT NOT NULL,
+	PRIMARY KEY (room_id, card_id)
+);
+
 INSERT INTO versions (id, name, type) VALUES
 	( 'US', 'American Edition', 'base' ),
 	( 'UK', 'UK Edition', 'base' ),

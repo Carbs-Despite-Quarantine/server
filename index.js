@@ -1,4 +1,5 @@
 const express = require("express");
+const mysql = require("mysql");
 const path = require("path");
 const app = express();
 
@@ -10,17 +11,17 @@ const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", 
 
 /**
  * User:
- *  - id (hash)
+ *  - id (int)
  *  - name (string)
  *  - icon (string)
- *  - roomId (hash)
+ *  - roomId (int)
  *  - socket (<socket>)
  **/
 var users = {}
 
 /**
  * Room:
- *  - id (hash)
+ *  - id (int)
  *  - users (hash[])
  *  - messages:
  *     - id (hash)
@@ -52,6 +53,82 @@ function validateBoolean(boolean) {
 
 function validateString(string) {
   return typeof string === "string" && string.length > 0;
+}
+
+/***********************
+ * Database Connection *
+ ***********************/
+
+var db = mysql.createConnection({
+  host: process.env.MYSQL_HOST || "localhost",
+  user: process.env.MYSQL_USER || "cah-online",
+  password: process.env.MYSQL_PASS || "password",
+  database: process.env.MYSQL_DB || "cah-online"
+});
+
+db.connect((err) => {
+  if (err) throw err;
+  console.log("Connected to the MySQL Database!");
+  getBlackCard("AU");
+});
+
+function getBlackCard(edition) {
+  var sql = `
+    SELECT text, draw, pick
+    FROM black_cards
+    WHERE id IN (
+      SELECT card_id 
+      FROM black_cards_link 
+      WHERE edition='${edition}'
+    )
+    ORDER BY RAND();
+  `;
+  db.query(sql, (err, result, fields) => {
+    if (err) return console.warn("Failed to get black card:", err);
+    console.debug("Got " + result.length + " results..");
+    console.debug("Got black card: " + result[0].text + ` (draw ${result[0].draw} pick ${result[0].pick})}`)
+  });
+}
+
+function setUserIcon(userId, icon) {
+  var sql = `
+    UPDATE users
+    SET icon = ?
+    WHERE id = ?;
+  `;
+  db.query(sql, [
+    icon,
+    userId
+  ],(err, result) => {
+    if (err) return console.warn("Failed to set icon for user #" + userId + ":", err);
+    console.debug("Set icon for user #" + userId + " to '" + icon + "'");
+  });
+}
+
+function setUserName(userId, name) {
+  var sql = `
+    UPDATE users
+    SET name = ?
+    WHERE id = ?;
+  `;
+  db.query(sql, [
+    name,
+    userId
+  ],(err, result) => {
+    if (err) return console.warn("Failed to set name for user #" + userId + ":", err);
+    console.debug("Set name for user #" + userId + " to '" + name + "'");
+  });
+}
+
+function addUserToRoom(userId, roomId) {
+  var sql = `INSERT INTO room_users (user_id, room_id) VALUES (?, ?);`;
+  db.query(sql, [
+    userId,
+    roomId
+  ], (err, result) => {
+    if (err) return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
+    console.debug("Added user #" + userId + " to room #" + roomId);
+  });
 }
 
 /***************
@@ -165,25 +242,7 @@ function createMessage(userId, content, isSystemMsg) {
  * Socket Handling *
  *******************/
 
-io.on("connection", (socket) => {
-  // Generate ID
-  var userId = hash64();
-  while (users.hasOwnProperty(userId)) userId = hash64();
-
-  // Save the users details
-  users[userId] = {
-    id: userId,
-    name: null,
-    icon: null,
-    roomId: null,
-    socket: socket
-  };
-
-  // Send the generated userId
-  socket.emit("init", {
-    userId: userId,
-    icons: icons
-  });
+function initSocket(socket, userId) {
 
   /*****************
    * Room Handling *
@@ -194,6 +253,8 @@ io.on("connection", (socket) => {
     if (user.error) return fn(user);
 
     if (!icons.includes(data.icon)) return fn({error: "Invalid Icon"});
+
+    setUserIcon(userId, data.icon);
 
     var room = getRoom(user.roomId);
 
@@ -232,29 +293,39 @@ io.on("connection", (socket) => {
 
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    // Generate an ID for the room
-    var roomId = hash64();
-    while (rooms.hasOwnProperty(roomId)) roomId = hash64();
+    var sql = `INSERT INTO rooms (edition) VALUES (?)`;
+    db.query(sql, [
+      "AU"
+    ], (err, result) => {
+      if (err) {
+        console.warn("Failed to create room:", err);
+        return fn({error: err});
+      }
+      var roomId = result.insertId;
+      addUserToRoom(userId, roomId);
 
-    // Create the room
-    var room = {
-      id: roomId,
-      users: [userId],
-      messages: {}
-    };
-    rooms[roomId] = room;
+      // Create the room
+      var room = {
+        id: roomId,
+        users: [userId],
+        messages: {}
+      };
+      rooms[roomId] = room;
 
-    // Update the users detaiils
-    user.name = stripHTML(data.userName);
-    user.roomId = roomId;
+      // Update the users detaiils
+      user.name = stripHTML(data.userName);
+      user.roomId = roomId;
 
-    // The message will be automatically added to the room
-    createMessage(userId, "created the room", true);
+      setUserName(userId, user.name);
 
-    console.log("Created room #" + roomId + " for user #" + userId);
+      // The message will be automatically added to the room
+      createMessage(userId, "created the room", true);
 
-    // Send the roomId to the user
-    fn({room: room});
+      console.log("Created room #" + roomId + " for user #" + userId);
+
+      // Send the roomId to the user
+      fn({room: room});
+    });
   });
 
   // Used to add an unnamed user to a room
@@ -268,6 +339,7 @@ io.on("connection", (socket) => {
     // Add the user to the room
     user.roomId = data.roomId;
     room.users.push(userId);
+    addUserToRoom(userId, data.roomId);
 
     // Cache the users in the room without including the socket
     var clientUsers = {};
@@ -314,6 +386,7 @@ io.on("connection", (socket) => {
     }
 
     user.name = stripHTML(data.userName);
+    setUserName(userId, user.name);
 
     var message = createMessage(userId, "joined the room", true);
     fn({message: message});
@@ -451,6 +524,39 @@ io.on("connection", (socket) => {
         roomUser.socket.emit("unlikeMessage", {msgId: message.id, userId: userId});
       }
     });
+  });
+}
+
+io.on("connection", (socket) => {
+
+  // Add user to the database
+  var sql = `INSERT INTO users VALUES ()`;
+  db.query(sql, (err, result) => {
+    if (err) {
+      console.warn("Failed to create user:", err);
+      return;
+    }
+
+    var userId = result.insertId;
+    console.log("Created user #" + userId);
+
+     // Save the users details
+    users[userId] = {
+      id: userId,
+      name: null,
+      icon: null,
+      roomId: null,
+      socket: socket
+    };
+
+    // Send the generated userId
+    socket.emit("init", {
+      userId: userId,
+      icons: icons
+    });
+
+    // Only register socket callbacks now that we have a userId
+    initSocket(socket, userId);
   });
 });
 
