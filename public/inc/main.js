@@ -2,7 +2,7 @@
  * Global Variables *
  ********************/
 
-var socket = io("https://cards.raphydaphy.com");
+var socket = io("http://localhost:3000");
 
 var userId;
 
@@ -482,6 +482,30 @@ socket.on("unlikeMessage", data => {
  * Card Interaction *
  ********************/
 
+/**
+ * Card:
+ *  - text: string
+ *  - isBlackCard: bool
+ *  - special: (black cards only)
+ *     - draw: int (1 or 2)
+ *     - pick: int (1, 2 or 3)
+ **/
+
+function getCardHTML(card) {
+  var html = `div class="card ${card.isBlackCard ? "black" : "white"} front">`;
+  if (card.isBlackCard && card.special) {
+    if (card.special.draw == 2) html += `<div class="special draw"></div>`;
+
+    var pick = card.special.pick;
+    if (pick > 1) {
+      html += `<div class="special pick`;
+      if (pick > 2) html += " pick-three";
+      html += `"></div>`;
+    }
+  }
+  return html + `<div class="card-text">${card.text}</div></div`;
+}
+
 $(".card").draggable({
   scroll: false,
   containment: "#game-wrapper",
@@ -511,7 +535,15 @@ $(".card-storage").droppable({
     // Move the card into storage
     ui.helper.data("addedToStorage", true);
     var element = ui.draggable.detach();
-    element.attr("style", "position: relative;");
+
+    var position = "relative";
+    if ($(event.target).is("#deck")) position = "absolute";
+
+    element.attr("style", `position: ${position};`);
     $(event.target).append(element);
   }
+});
+
+$("#black-deck").click(event => {
+  console.log("wow");
 });

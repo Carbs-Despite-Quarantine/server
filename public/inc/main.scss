@@ -305,9 +305,20 @@ input[type=text] {
 		}
 
 		&#deck {
-			left: 20px;
-			top: 20px;
 			padding: 10px;
+			left: 10%;
+			top: 10%;
+			transition: $resizeTransition;
+
+			@media only screen and (max-width: $handWidth + 270px) {
+				left: 20px;
+				top: 20px;
+				transition: $resizeTransition;
+			}
+
+			.card {
+				position: absolute;
+			}
 		}
 	}
 }
