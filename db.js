@@ -18,6 +18,10 @@ exports.query = (sql, params, fn) => {
   db.query(sql, params, fn);
 };
 
+/*********
+ * Users *
+ *********/
+
 exports.setUserIcon = (userId, icon) => {
   db.query(`UPDATE users SET icon = ? WHERE id = ?;`, [
     icon,
@@ -36,7 +40,45 @@ exports.setUserName = (userId, name) => {
     if (err) return console.warn("Failed to set name for user #" + userId + ":", err);
     console.debug("Set name for user #" + userId + " to '" + name + "'");
   });
-}
+};
+
+/*********
+ * Rooms *
+ *********/
+
+exports.getRoom = (roomId, fn) => {
+  if (!roomId) return fn({error: "Room ID is required"});
+  var sql = `
+    SELECT token, edition, rotate_czar as rotateCzar
+    FROM rooms
+    WHERE id = ?;
+  `;
+  db.query(sql, [
+    roomId
+  ],(err, results, fields) => {
+    if (err) {
+      console.warn("Failed to get room #" + roomId + ":", err);
+      return fn({error: "MySQL Error"});
+    } else if (results.length == 0) {
+      return fn({error: "Invalid Room ID"});
+    }
+    fn({
+      id: roomId,
+      token: results[0].token,
+      edition: results[0].edition,
+      rotateCzar: results[0].rotateCzar
+    });
+  });
+};
+
+exports.getRoomWithToken = (roomId, token, fn) => {
+  if (!helpers.validateHash(token, 8)) return fn({error: "Token is required"});
+  exports.getRoom(roomId, room => {
+    if (room.error) return fn(room);
+    if (room.token != token) return fn({error: "Invalid Token"});
+    return fn(room);
+  });
+};
 
 exports.addUserToRoom = (userId, roomId) => {
   db.query(`INSERT INTO room_users (user_id, room_id) VALUES (?, ?);`, [
@@ -46,7 +88,7 @@ exports.addUserToRoom = (userId, roomId) => {
     if (err) return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
     console.debug("Added user #" + userId + " to room #" + roomId);
   });
-}
+};
 
 exports.getRoomUsers = (roomId, fn) => {
   var sql = `
@@ -80,43 +122,22 @@ exports.getRoomUsers = (roomId, fn) => {
     });
     fn({users: roomUsers, userIds: roomUserIds});
   });
-}
+};
 
-exports.getRoom = (roomId, fn) => {
-  if (!roomId) return fn({error: "Room ID is required"});
-  var sql = `
-    SELECT token, edition, rotate_czar as rotateCzar
-    FROM rooms
-    WHERE id = ?;
-  `;
-  db.query(sql, [
+exports.deleteRoom = (roomId) => {
+  db.query(`DELETE FROM rooms WHERE id = ?;`, [
     roomId
-  ],(err, results, fields) => {
-    if (err) {
-      console.warn("Failed to get room #" + roomId + ":", err);
-      return fn({error: "MySQL Error"});
-    } else if (results.length == 0) {
-      return fn({error: "Invalid Room ID"});
-    }
-    fn({
-      id: roomId,
-      token: results[0].token,
-      edition: results[0].edition,
-      rotateCzar: results[0].rotateCzar
-    });
+  ], (err, result) => {
+    if (err) return console.warn("Failed to delete room #" + roomId + ":", err);
+    console.log("Deleted room #" + roomId);
   });
-}
+};
 
-exports.getRoomWithToken = (roomId, token, fn) => {
-  if (!helpers.validateHash(token, 8)) return fn({error: "Token is required"});
-  exports.getRoom(roomId, room => {
-    if (room.error) return fn(room);
-    if (room.token != token) return fn({error: "Invalid Token"});
-    return fn(room);
-  });
-}
+/********
+ * Chat *
+ ********/
 
-exports.getRoomMessages = (roomId, limit, fn) => {
+exports.getLatestMessages = (roomId, limit, fn) => {
   var sql = `
     SELECT 
       msg.id, 
@@ -151,7 +172,7 @@ exports.getRoomMessages = (roomId, limit, fn) => {
     });
     fn({messages: roomMessages});
   });  
-}
+};
 
 exports.createMessage = (userId, content, isSystemMsg, fn) => {
   if (!helpers.validateString(content)) return fn({error: "Invalid Message"});
@@ -182,43 +203,74 @@ exports.createMessage = (userId, content, isSystemMsg, fn) => {
       likes: []
     });
   });
-}
+};
 
-exports.deleteRoom = (roomId) => {
-  db.query(`DELETE FROM rooms WHERE id = ?;`, [
-    roomId
-  ], (err, result) => {
-    if (err) return console.warn("Failed to delete room #" + roomId + ":", err);
-    console.log("Deleted room #" + roomId);
-  });
-}
+/*********
+ * Cards *
+ *********/
 
-exports.getBlackCard = (roomId) => {
+function getCards(roomId, black, count, fn) {
+  if (!helpers.validateUInt(roomId)) return fn({error: "Invalid Room ID"});
+  if (!helpers.validateUInt(count)) count = 1;
+  var color = black ? "black" : "white";
   var sql = `
-    SELECT id, text, draw, pick
-    FROM black_cards
+    SELECT *
+    FROM ${color}_cards
     WHERE id IN (
       SELECT card_id 
-      FROM black_cards_link 
+      FROM ${color}_cards_link 
       WHERE edition IN (
         SELECT edition
         FROM rooms
-        WHERE id = ?
+        WHERE id = ${roomId}
       )
     ) AND id NOT IN (
       SELECT card_id
-      FROM room_black_cards
-      WHERE room_id = ?
+      FROM room_${color}_cards
+      WHERE room_id = ${roomId}
     )
     ORDER BY RAND()
-    LIMIT 1;
+    LIMIT ${count};
   `;
-  db.query(sql, [roomId, roomId],(err, result, fields) => {
-    if (err) return console.warn("Failed to get black card:", err);
-    if (result.length > 0) {
-      db.query(`INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?);`, [result[0].id, roomId])
-    }
-    console.debug("Got " + result.length + " results..");
-    console.debug("Got black card: " + result[0].text + ` (draw ${result[0].draw} pick ${result[0].pick})}`)
+  db.query(sql, (err, results, fields) => {
+    if (err) {
+      console.warn(`Failed to get ${color} card:`, err);
+      return fn({error: "MySQL Error"});
+    } else if (results.length == 0) return fn({error: "No cards left!"});
+
+    var cards = [];
+    var cardsSql = [];
+
+    results.forEach(result => {
+      cardsSql.push(`(${result.id}, ${roomId})`);
+      var card = {id: result.id, text: result.text};
+      if (black) {
+        card.draw = result.draw;
+        card.pick = result.pick;
+      }
+      cards.push(card);
+    });
+
+    fn(cards);
+
+    // Prevent the chosen cards from being reused
+    var sql = `INSERT INTO room_${color}_cards (card_id, room_id) VALUES `;
+    db.query(sql + cardsSql.join(", ") + ";", (err, results) => {
+      if (err) return console.warn(`Failed to add cards to room_${color}_cards:`, err);
+    });
+  });
+}
+
+exports.getBlackCard = (roomId, fn) => {
+  getCards(roomId, true, 1, cards => {
+    if (cards.error) return fn(cards);
+    fn(cards[0]);
+  });
+};
+
+exports.getWhiteCards = (roomId, count, fn) => {
+  getCards(roomId, false, count, cards => {
+    if (cards.error) return fn(cards);
+    fn(cards);
   });
 }

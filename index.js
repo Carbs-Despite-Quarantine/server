@@ -11,6 +11,9 @@ const helpers = require("./helpers");
 // A selection of Font Awesome icons suitable for profile pictures
 const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
 
+// The number of white cards in a standard CAH hand
+const handSize = 7;
+
 /**
  * User:
  *  - id (int)
@@ -200,7 +203,7 @@ function initSocket(socket, userId) {
         };
         roomUserIds.push(userId);
 
-        db.getRoomMessages(room.id, 15, response => {
+        db.getLatestMessages(room.id, 15, response => {
           if (response.error) {
             console.warn("failed to get latest messages from room #" + room.id + ": " + response.error);
             room.messages = {};
@@ -255,25 +258,33 @@ function initSocket(socket, userId) {
       user.name = helpers.stripHTML(data.userName);
       db.setUserName(userId, user.name);
 
-      db.createMessage(userId, "joined the room", true, message => {
-        fn({message: message});
+      db.getWhiteCards(data.roomId, 7, cards => {
+        if (cards.error) {
+          console.log("Room ID: " + data.roomId + " valid? ", helpers.validateUInt(data.roomId));
+          console.warn("Failed to get white cards for new user #" + userId + ":", cards.error);
+          return fn(cards);
+        }
 
-        response.userIds.forEach(roomUserId => {
-          if (!users.hasOwnProperty(roomUserId)) return;
-          var socketUser = users[roomUserId];
+        db.createMessage(userId, "joined the room", true, message => {
+          fn({message: message, cards: cards});
 
-          // Send the new users info to all other active room users
-          if (roomUserId != userId && socketUser.roomId == data.roomId) {
-            socketUser.socket.emit("userJoined", {
-              user: {
-                id: userId,
-                name: user.name,
-                icon: user.icon,
-                roomId: user.roomId
-              },
-              message: message
-            });
-          }
+          response.userIds.forEach(roomUserId => {
+            if (!users.hasOwnProperty(roomUserId)) return;
+            var socketUser = users[roomUserId];
+
+            // Send the new users info to all other active room users
+            if (roomUserId != userId && socketUser.roomId == data.roomId) {
+              socketUser.socket.emit("userJoined", {
+                user: {
+                  id: userId,
+                  name: user.name,
+                  icon: user.icon,
+                  roomId: user.roomId
+                },
+                message: message
+              });
+            }
+          });
         });
       });
     });
@@ -364,13 +375,26 @@ function initSocket(socket, userId) {
               return fn({error: "MySQL Error"});
             }
 
-            fn({});
+            // Get starting white cards
+            db.getWhiteCards(user.roomId, handSize * response.userIds.length, cards => {
+              if (cards.error) {
+                console.warn("Failed to get starting cards for room #" + user.roomId + ":", cards.error);
+                return fn(cards);
+              }
 
-            response.userIds.forEach(userId => {
-              if (!users.hasOwnProperty(userId)) return;
-              users[userId].socket.emit("roomSettings", {
-                edition: data.edition,
-                rotateCzar: rotateCzar
+              console.debug("Setup room #" + user.roomId + " with edition '" + data.edition + "'");
+              fn({cards: cards.slice(0, handSize)});
+
+              var userNum = 1;
+              response.userIds.forEach(roomUserId => {
+                if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
+                if (!response.users[roomUserId].name || !response.users[roomUserId].icon) return;
+                users[roomUserId].socket.emit("roomSettings", {
+                  edition: data.edition,
+                  rotateCzar: rotateCzar,
+                  cards: cards.slice(userNum * handSize, userNum * handSize + 7)
+                });
+                userNum++;
               });
             });
           });

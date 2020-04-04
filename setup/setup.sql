@@ -2,7 +2,7 @@ USE `cah-online`;
 
 DROP TABLE IF EXISTS room_white_cards, room_black_cards;
 DROP TABLE IF EXISTS message_likes, messages, room_users, black_cards_link, white_cards_link;
-DROP TABLE IF EXISTS rooms, users, black_cards, white_cards;
+DROP TABLE IF EXISTS rooms, users, black_cards, white_cards, versions;
 
 CREATE table versions (
 	id VARCHAR(8) NOT NULL,

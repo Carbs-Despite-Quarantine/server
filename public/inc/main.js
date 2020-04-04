@@ -339,7 +339,7 @@ socket.on("init", data => {
   console.debug("Obtained userId " + data.userId);
   userId = data.userId;
 
-  var roomId = getURLParam("room");
+  var roomId = parseInt(getURLParam("room"));
   var roomToken = getURLParam("token");
 
   users[userId] = {
@@ -397,6 +397,8 @@ socket.on("roomSettings", data => {
   console.debug("Room has been set to " + data.edition + " edition!");
   room.edition = data.edition;
   room.rotateCzar = data.rotateCzar;
+
+  addCardsToDeck(data.cards);
 });
 
 window.addEventListener("beforeunload", (event) => {
@@ -437,6 +439,8 @@ $("#set-username").submit(event => {
       }
 
       console.debug("Entered room #" + user.roomId);
+      addCardsToDeck(response.cards);
+
       $("#overlay-container").hide();
 
       user.name = userName;
@@ -526,7 +530,9 @@ $("#start-game").click(event => {
       $("#settings-title").hide();
       return console.warn("Failed to setup room:", response.error);
     }
+
     $("#overlay-container").hide();
+    addCardsToDeck(response.cards);
   });
 
 });
@@ -598,31 +604,7 @@ socket.on("unlikeMessage", data => {
  * Card Interaction *
  ********************/
 
-/**
- * Card:
- *  - text: string
- *  - isBlackCard: bool
- *  - special: (black cards only)
- *     - draw: int (1 or 2)
- *     - pick: int (1, 2 or 3)
- **/
-
-function getCardHTML(card) {
-  var html = `div class="card ${card.isBlackCard ? "black" : "white"} front">`;
-  if (card.isBlackCard && card.special) {
-    if (card.special.draw == 2) html += `<div class="special draw"></div>`;
-
-    var pick = card.special.pick;
-    if (pick > 1) {
-      html += `<div class="special pick`;
-      if (pick > 2) html += " pick-three";
-      html += `"></div>`;
-    }
-  }
-  return html + `<div class="card-text">${card.text}</div></div`;
-}
-
-$(".card").draggable({
+const cardDragHandler = {
   scroll: false,
   containment: "#game-wrapper",
   start: (event, ui) => {
@@ -643,7 +625,33 @@ $(".card").draggable({
       }
     }
   }
-});
+};
+
+function appendCard(card, target) {
+  var id = (card.draw ? "black" : "white") + "-card-" + card.id;
+  var html = `<div class="card ${card.draw ? "black" : "white"} front" id="${id}">`;
+  if (card.draw || card.pick) {
+    if (card.draw == 2) html += `<div class="special draw"></div>`;
+
+    var pick = card.special.pick;
+    if (pick > 1) {
+      html += `<div class="special pick`;
+      if (pick > 2) html += " pick-three";
+      html += `"></div>`;
+    }
+  }
+  target.append(html + `<div class="card-text">${card.text}</div></div`);
+  $("#" + id).draggable(cardDragHandler);
+}
+
+// TODO: animate
+function addCardsToDeck(cards) {
+  cards.forEach(card => {
+    appendCard(card, $("#hand"));
+  });
+}
+
+$(".card").draggable(cardDragHandler);
 
 
 $(".card-storage").droppable({
