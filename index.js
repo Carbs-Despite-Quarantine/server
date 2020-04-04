@@ -1,10 +1,12 @@
 const express = require("express");
-const mysql = require("mysql");
 const path = require("path");
 const app = express();
 
 var http = require("http").createServer(app);
 var io = require("socket.io")(http);
+
+const db = require("./db");
+const helpers = require("./helpers");
 
 // A selection of Font Awesome icons suitable for profile pictures
 const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
@@ -19,265 +21,6 @@ const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", 
  **/
 var users = {}
 
-/*******************
- * Data Validation *
- *******************/
-
-function validateHash(hash, length) {
-  return typeof hash === "string" && hash.length === length;
-}
-
-function validateUInt(uint) {
-  return typeof uint === "number" && uint % 1 === 0 && uint >= 0;
-}
-
-function validateBoolean(boolean) {
-  return typeof boolean === "boolean";
-}
-
-function validateString(string) {
-  return typeof string === "string" && string.length > 0;
-}
-
-/***********************
- * Database Connection *
- ***********************/
-
-var db = mysql.createConnection({
-  host: process.env.MYSQL_HOST || "localhost",
-  user: process.env.MYSQL_USER || "cah-online",
-  password: process.env.MYSQL_PASS || "password",
-  database: process.env.MYSQL_DB || "cah-online"
-});
-
-db.connect((err) => {
-  if (err) throw err;
-  console.log("Connected to the MySQL Database!");
-  getBlackCard("AU");
-});
-
-function getBlackCard(edition) {
-  var sql = `
-    SELECT text, draw, pick
-    FROM black_cards
-    WHERE id IN (
-      SELECT card_id 
-      FROM black_cards_link 
-      WHERE edition='${edition}'
-    )
-    ORDER BY RAND();
-  `;
-  db.query(sql, (err, result, fields) => {
-    if (err) return console.warn("Failed to get black card:", err);
-    console.debug("Got " + result.length + " results..");
-    console.debug("Got black card: " + result[0].text + ` (draw ${result[0].draw} pick ${result[0].pick})}`)
-  });
-}
-
-function setUserIcon(userId, icon) {
-  db.query(`UPDATE users SET icon = ? WHERE id = ?;`, [
-    icon,
-    userId
-  ],(err, result) => {
-    if (err) return console.warn("Failed to set icon for user #" + userId + ":", err);
-    console.debug("Set icon for user #" + userId + " to '" + icon + "'");
-  });
-}
-
-function setUserName(userId, name) {
-  db.query(`UPDATE users SET name = ? WHERE id = ?;`, [
-    name,
-    userId
-  ],(err, result) => {
-    if (err) return console.warn("Failed to set name for user #" + userId + ":", err);
-    console.debug("Set name for user #" + userId + " to '" + name + "'");
-  });
-}
-
-function addUserToRoom(userId, roomId) {
-  db.query(`INSERT INTO room_users (user_id, room_id) VALUES (?, ?);`, [
-    userId,
-    roomId
-  ], (err, result) => {
-    if (err) return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
-    console.debug("Added user #" + userId + " to room #" + roomId);
-  });
-}
-
-function getRoomUsers(roomId, fn) {
-  var sql = `
-    SELECT id, name, icon
-    FROM users 
-    WHERE id IN (
-      SELECT user_id
-      FROM room_users
-      WHERE room_id = ?
-    );
-  `;
-  db.query(sql, [
-    roomId
-  ],(err, results, fields) => {
-    if (err) {
-      console.warn("Failed to get users for room #" + roomId + ":", err);
-      return fn({error: "MySQL Error"});
-    }
-
-    var roomUsers = {};
-    var roomUserIds = [];
-
-    // Convert arrays to objects (TODO: efficiency?)
-    results.forEach(row => {
-      roomUserIds.push(row.id);
-      roomUsers[row.id] = {
-        id: row.id,
-        name: row.name,
-        icon: row.icon
-      };
-    });
-    fn({users: roomUsers, userIds: roomUserIds});
-  });
-}
-
-function getRoom(roomId, fn) {
-  if (!roomId) return fn({error: "Room ID is required"});
-  var sql = `
-    SELECT token, edition, rotate_czar as rotateCzar
-    FROM rooms
-    WHERE id = ?;
-  `;
-  db.query(sql, [
-    roomId
-  ],(err, results, fields) => {
-    if (err) {
-      console.warn("Failed to get room #" + roomId + ":", err);
-      return fn({error: "MySQL Error"});
-    } else if (results.length == 0) {
-      return fn({error: "Invalid Room ID"});
-    }
-    fn({
-      id: roomId,
-      token: results[0].token,
-      edition: results[0].edition,
-      rotateCzar: results[0].rotateCzar
-    });
-  });
-}
-
-function getRoomWithToken(roomId, token, fn) {
-  if (!validateHash(token, 8)) return fn({error: "Token is required"});
-  getRoom(roomId, room => {
-    if (room.error) return fn(room);
-    if (room.token != token) return fn({error: "Invalid Token"});
-    return fn(room);
-  });
-}
-
-function getRoomMessages(roomId, limit, fn) {
-  var sql = `
-    SELECT 
-      msg.id, 
-      msg.user_id AS userId, 
-      msg.content, 
-      msg.system_msg AS isSystemMsg, 
-      GROUP_CONCAT(likes.user_id SEPARATOR ',') AS likes
-    FROM messages msg
-    LEFT JOIN message_likes likes ON msg.id = likes.message_id
-    WHERE room_id = ?
-    GROUP BY msg.id
-    ORDER BY msg.id DESC
-    LIMIT ?;`;
-  db.query(sql, [
-    roomId,
-    limit
-  ],(err, results, fields) => {
-    if (err) {
-      console.warn("Failed to get messages for room #" + roomId + ":", err);
-      return fn({error: "MySQL Error"});
-    }
-    var roomMessages = {};
-
-    results.forEach(row => {
-      roomMessages[row.id] = {
-        id: row.id,
-        userId: row.userId,
-        content: row.content,
-        isSystemMsg: row.isSystemMsg,
-        likes: row.likes ? row.likes.split(",") : []
-      }
-    });
-    fn({messages: roomMessages});
-  });  
-}
-
-function createMessage(userId, content, isSystemMsg, fn) {
-  var user = getUser(userId, true);
-  if (user.error) return fn(user);
-  if (!validateString(content)) return fn({error: "Invalid Message"});
-
-  content = stripHTML(content);
-
-  // Try to insert the message into the database
-  db.query(`INSERT INTO messages (room_id, user_id, content, system_msg) VALUES (?, ?, ?, ?);`, [
-    user.roomId,
-    userId,
-    content,
-    isSystemMsg
-  ], (err, result) => {
-    if (err) {
-      console.warn("Failed to create message:", err);
-      return fn({error: "MySQL Error"});
-    }
-    var msgId = result.insertId;
-
-    // Create an object to represent the message on the client
-    fn({
-      id: msgId,
-      userId: userId,
-      content: content,
-      isSystemMsg: isSystemMsg,
-      likes: []
-    });
-  });
-}
-
-function deleteRoom(roomId) {
-  db.query(`DELETE FROM rooms WHERE id = ?;`, [
-    roomId
-  ], (err, result) => {
-    if (err) return console.warn("Failed to delete room #" + roomId + ":", err);
-    console.log("Deleted room #" + roomId);
-  });
-}
-
-/***************
- * Data Lookup *
- ***************/
-
-function getUser(userId, requireRoom=false) {
-  if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
-  if (requireRoom && !users[userId].roomId) return {error: "Not in a room"};
-  return users[userId];
-}
-
-/********************
- * Helper Functions *
- ********************/
-
-// generate a random hash
-function makeHash(length) {
-  var result = "";
-  var hexChars = "0123456789abcdefghijklmnopqrstuvwxyz";
-  for (var i = 0; i < length; i += 1) {
-    result += hexChars[Math.floor(Math.random() * hexChars.length)];
-  }
-  return result;
-}
-
-// Replace </> characters with 'safe' encoded counterparts
-function stripHTML(string) {
-  return string.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
 // Returns all the icons which are not already taken
 function getAvailableIcons(roomIcons) {
   var availableIcons = [];
@@ -288,6 +31,12 @@ function getAvailableIcons(roomIcons) {
   });
 
   return availableIcons;
+}
+
+function getUser(userId, requireRoom=false) {
+  if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
+  if (requireRoom && !users[userId].roomId) return {error: "Not in a room"};
+  return users[userId];
 }
 
 /*****************
@@ -323,10 +72,10 @@ function initSocket(socket, userId) {
 
     if (!icons.includes(data.icon)) return fn({error: "Invalid Icon"});
 
-    setUserIcon(userId, data.icon);
+    db.setUserIcon(userId, data.icon);
 
     if (user.roomId) {
-      getRoomUsers(user.roomId, response => {
+      db.getRoomUsers(user.roomId, response => {
         if (response.error) {
           console.warn("Failed to get users for room #" + user.roomId);
           return fn({error: "Room error"});
@@ -368,9 +117,9 @@ function initSocket(socket, userId) {
     var user = getUser(userId);
     if (user.error) return fn(user);
 
-    if (!validateString(data.userName)) return fn({error: "Invalid Username"});
+    if (!helpers.validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    var token = makeHash(8);
+    var token = helpers.makeHash(8);
 
     db.query(`INSERT INTO rooms (token) VALUES (?);`, [
       token
@@ -381,7 +130,7 @@ function initSocket(socket, userId) {
       }
 
       var roomId = result.insertId;
-      addUserToRoom(userId, roomId);
+      db.addUserToRoom(userId, roomId);
 
       // Create the room
       var room = {
@@ -392,10 +141,10 @@ function initSocket(socket, userId) {
       };
 
       // Update the users detaiils
-      user.name = stripHTML(data.userName);
+      user.name = helpers.stripHTML(data.userName);
       user.roomId = roomId;
 
-      setUserName(userId, user.name);
+      db.setUserName(userId, user.name);
 
       // Get a list of editions to give the client
       db.query(`SELECT id, name FROM versions WHERE type = 'base';`, (err, results) => {
@@ -408,7 +157,7 @@ function initSocket(socket, userId) {
         results.forEach(result => editions[result.id] = result.name);
 
         // Wait for the join message to be created before sending a response
-        createMessage(userId, "created the room", true, message => {
+        db.createMessage(userId, "created the room", true, message => {
           if (message.error) console.warn("Failed to create join message:", message.error);
           else room.messages[message.id] = message;
 
@@ -426,11 +175,11 @@ function initSocket(socket, userId) {
   socket.on("joinRoom", (data, fn) => {
     var user = getUser(userId);
     if (user.error) return fn(user);
-    getRoomWithToken(data.roomId, data.token, room => {
+    db.getRoomWithToken(data.roomId, data.token, room => {
       if (room.error) return fn(room);
 
       // Do this before getting messages since it doubles as a check for room validity
-      getRoomUsers(room.id, response => {
+      db.getRoomUsers(room.id, response => {
         if (response.error) {
           console.warn("Failed to get user ids when joining room #" + room.id);
           return fn(response);
@@ -451,7 +200,7 @@ function initSocket(socket, userId) {
         };
         roomUserIds.push(userId);
 
-        getRoomMessages(room.id, 15, response => {
+        db.getRoomMessages(room.id, 15, response => {
           if (response.error) {
             console.warn("failed to get latest messages from room #" + room.id + ": " + response.error);
             room.messages = {};
@@ -461,7 +210,7 @@ function initSocket(socket, userId) {
 
           // Add the user to the room
           user.roomId = room.id;
-          addUserToRoom(userId, room.id);
+          db.addUserToRoom(userId, room.id);
 
           // Make aa list of the icons currently in use
           var roomIcons = [];
@@ -491,9 +240,9 @@ function initSocket(socket, userId) {
     var user = getUser(userId, true);
     if (user.error) return fn(user);
 
-    if (!validateString(data.userName)) return fn({error: "Invalid Username"});
+    if (!helpers.validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    getRoomUsers(data.roomId, response => {
+    db.getRoomUsers(data.roomId, response => {
       if (response.error) {
         console.warn("Failed to get user list for room #" + data.roomId);
         return fn({error: "Unexpected error"});
@@ -503,10 +252,10 @@ function initSocket(socket, userId) {
         return fn({error: "Can't enter room that hasn't been joined"});
       }
 
-      user.name = stripHTML(data.userName);
-      setUserName(userId, user.name);
+      user.name = helpers.stripHTML(data.userName);
+      db.setUserName(userId, user.name);
 
-      createMessage(userId, "joined the room", true, message => {
+      db.createMessage(userId, "joined the room", true, message => {
         fn({message: message});
 
         response.userIds.forEach(roomUserId => {
@@ -536,7 +285,7 @@ function initSocket(socket, userId) {
 
     var activeUsers = 0;
 
-    getRoomUsers(user.roomId, response => {
+    db.getRoomUsers(user.roomId, response => {
       if (response.error) return console.warn("Failed to get user list when leaving room #" + user.roomId);
       else if (response.userIds.length == 0) {
         user.roomId = null;
@@ -550,14 +299,14 @@ function initSocket(socket, userId) {
           if (roomUserId != userId && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == user.roomId) activeUsers++;
         });
 
-        if (activeUsers == 0) deleteRoom(user.roomId);
+        if (activeUsers == 0) db.deleteRoom(user.roomId);
 
         // If we aren't returning here, we still need the roomId for createMessage()
         user.roomId = null;
         return;
       }
 
-      createMessage(userId, "left the room", true, message => {
+      db.createMessage(userId, "left the room", true, message => {
           response.userIds.forEach(roomUserId => {
           if (!users.hasOwnProperty(roomUserId)) return;
           var socketUser = users[roomUserId];
@@ -573,7 +322,7 @@ function initSocket(socket, userId) {
         });
 
         // Delete the room once all users have left
-        if (activeUsers == 0) deleteRoom(user.roomId);
+        if (activeUsers == 0) db.deleteRoom(user.roomId);
         user.roomId = null;
       });
     });
@@ -593,11 +342,11 @@ function initSocket(socket, userId) {
         return fn({error: "MySQL Error"});
       } else if (result.length == 0) return fn({error: "Invalid Edition"});
 
-      getRoom(user.roomId, room => {
+      db.getRoom(user.roomId, room => {
         if (room.error) return fn(room);
         else if (room.edition) return fn({error: "Room is already setup!"});
 
-        getRoomUsers(user.roomId, response => {
+        db.getRoomUsers(user.roomId, response => {
           if (response.error) {
             console.warn("Failed to get users when configuring room #" + user.roomId);
             return fn(response);
@@ -637,12 +386,12 @@ function initSocket(socket, userId) {
   socket.on("chatMessage", (data, fn) => {
     var user = getUser(userId, true);
     if (user.error) return fn(user);
-    if (!validateString(data.content)) return fn({error: "Invalid Message"});
+    if (!helpers.validateString(data.content)) return fn({error: "Invalid Message"});
 
-    createMessage(userId, data.content, false, message => {
+    db.createMessage(userId, data.content, false, message => {
       fn({message: message});
 
-      getRoomUsers(user.roomId, response => {
+      db.getRoomUsers(user.roomId, response => {
         if (response.error) return console.warn("Failed to get users for room #" + user.roomId);
         response.userIds.forEach(roomUserId => {
           if (!users.hasOwnProperty(roomUserId)) return;
@@ -692,7 +441,7 @@ function initSocket(socket, userId) {
         }
         fn({});
 
-        getRoomUsers(user.roomId, response => {
+        db.getRoomUsers(user.roomId, response => {
           if (response.error) return console.warn("Failed to get user ids for room #" + user.roomId);
           response.userIds.forEach(roomUserId => {
             if (!users.hasOwnProperty(roomUserId)) return;
@@ -725,7 +474,7 @@ function initSocket(socket, userId) {
       fn({});
 
       // Inform other active users that the like was removed
-      getRoomUsers(user.roomId, response => {
+      db.getRoomUsers(user.roomId, response => {
         if (response.error) return console.warn("Failed to get users for room #" + user.roomId);
         response.userIds.forEach(roomUserId => {
           if (!users.hasOwnProperty(roomUserId)) return;
