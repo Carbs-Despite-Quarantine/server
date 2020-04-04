@@ -80,27 +80,22 @@ exports.getRoomWithToken = (roomId, token, fn) => {
   });
 };
 
-exports.addUserToRoom = (userId, roomId) => {
-  db.query(`INSERT INTO room_users (user_id, room_id) VALUES (?, ?);`, [
-    userId,
-    roomId
+exports.addUserToRoom = (userId, roomId, fn=null) => {
+  db.query(`UPDATE users SET room_id = ? WHERE id = ?;`, [
+    roomId,
+    userId
   ], (err, result) => {
-    if (err) return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
+    if (err) {
+      if (fn) fn({error: "MySQL Error"});
+      return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
+    }
     console.debug("Added user #" + userId + " to room #" + roomId);
+    if (fn) fn({});
   });
 };
 
 exports.getRoomUsers = (roomId, fn) => {
-  var sql = `
-    SELECT id, name, icon
-    FROM users 
-    WHERE id IN (
-      SELECT user_id
-      FROM room_users
-      WHERE room_id = ?
-    );
-  `;
-  db.query(sql, [
+  db.query(`SELECT id, name, icon FROM users WHERE room_id = ?;`, [
     roomId
   ],(err, results, fields) => {
     if (err) {
@@ -178,10 +173,9 @@ exports.createMessage = (userId, content, isSystemMsg, fn) => {
   if (!helpers.validateString(content)) return fn({error: "Invalid Message"});
   content = helpers.stripHTML(content);
 
-  // We get the room ID from room_users in order to create the message
   db.query(`
     INSERT INTO messages (room_id, user_id, content, system_msg) 
-    VALUES ((SELECT room_id FROM room_users WHERE user_id = ?), ?, ?, ?);
+    VALUES ((SELECT room_id FROM users WHERE id = ?), ?, ?, ?);
   `, [
     userId,
     userId,
@@ -237,40 +231,49 @@ function getCards(roomId, black, count, fn) {
       console.warn(`Failed to get ${color} card:`, err);
       return fn({error: "MySQL Error"});
     } else if (results.length == 0) return fn({error: "No cards left!"});
+    return fn(results);
+  });
+}
 
-    var cards = [];
+exports.getBlackCard = (roomId, fn) => {
+  getCards(roomId, true, 1, results => {
+    if (results.error) return fn(results);
+    fn({
+      id: results[0].id,
+      text: results[0].text,
+      draw: results[0].draw,
+      pick: results[0].pick
+    });
+
+    db.query(`INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)`, 
+    [
+      results[0].id, 
+      roomId
+    ], (err, results) => {
+      if (err) return console.warn("Failed to mark black card as used:", err);
+    });
+  });
+};
+
+exports.getWhiteCards = (roomId, userId, count, fn) => {
+  if (!helpers.validateUInt(userId)) return fn({error: "Invalid User ID"});
+  getCards(roomId, false, count, results => {
+    if (results.error) return fn(results);
+
+    var cards = {};
     var cardsSql = [];
 
     results.forEach(result => {
-      cardsSql.push(`(${result.id}, ${roomId})`);
-      var card = {id: result.id, text: result.text};
-      if (black) {
-        card.draw = result.draw;
-        card.pick = result.pick;
-      }
-      cards.push(card);
+      cardsSql.push(`(${result.id}, ${roomId}, ${userId})`);
+      cards[result.id] = {id: result.id, text: result.text};
     });
 
     fn(cards);
 
     // Prevent the chosen cards from being reused
-    var sql = `INSERT INTO room_${color}_cards (card_id, room_id) VALUES `;
+    var sql = `INSERT INTO room_white_cards (card_id, room_id, user_id) VALUES `;
     db.query(sql + cardsSql.join(", ") + ";", (err, results) => {
-      if (err) return console.warn(`Failed to add cards to room_${color}_cards:`, err);
+      if (err) return console.warn("Failed to mark white card as used:", err);
     });
-  });
-}
-
-exports.getBlackCard = (roomId, fn) => {
-  getCards(roomId, true, 1, cards => {
-    if (cards.error) return fn(cards);
-    fn(cards[0]);
-  });
-};
-
-exports.getWhiteCards = (roomId, count, fn) => {
-  getCards(roomId, false, count, cards => {
-    if (cards.error) return fn(cards);
-    fn(cards);
   });
 }

@@ -133,41 +133,41 @@ function initSocket(socket, userId) {
       }
 
       var roomId = result.insertId;
-      db.addUserToRoom(userId, roomId);
+      db.addUserToRoom(userId, roomId, () => {
+        // Used to represent the room on the client
+        var room = {
+          id: roomId,
+          token: token,
+          users: [userId],
+          messages: {}
+        };
 
-      // Create the room
-      var room = {
-        id: roomId,
-        token: token,
-        users: [userId],
-        messages: {}
-      };
+        // Update the users detaiils
+        user.name = helpers.stripHTML(data.userName);
+        user.roomId = roomId;
 
-      // Update the users detaiils
-      user.name = helpers.stripHTML(data.userName);
-      user.roomId = roomId;
+        db.setUserName(userId, user.name);
 
-      db.setUserName(userId, user.name);
+        // Get a list of editions to give the client
+        db.query(`SELECT id, name FROM versions WHERE type = 'base';`, (err, results) => {
+          if (err) {
+            console.warn("Failed to retrieve edition list when creating room:", err);
+            return fn({error: "MySQL Error"});
+          }
 
-      // Get a list of editions to give the client
-      db.query(`SELECT id, name FROM versions WHERE type = 'base';`, (err, results) => {
-        if (err) {
-          console.warn("Failed to retrieve edition list when creating room:", err);
-          return fn({error: "MySQL Error"});
-        }
+          var editions = {};
+          results.forEach(result => editions[result.id] = result.name);
 
-        var editions = {};
-        results.forEach(result => editions[result.id] = result.name);
+          // Wait for the join message to be created before sending a response
+          db.createMessage(userId, "created the room", true, message => {
+            if (message.error) console.warn("Failed to create join message:", message.error);
+            else room.messages[message.id] = message;
 
-        // Wait for the join message to be created before sending a response
-        db.createMessage(userId, "created the room", true, message => {
-          if (message.error) console.warn("Failed to create join message:", message.error);
-          else room.messages[message.id] = message;
-
-          console.log("Created room #" + roomId + " for user #" + userId);
-          fn({
-            room: room,
-            editions: editions
+            console.log("Created room #" + roomId + " for user #" + userId);
+            fn({
+              room: room,
+              editions: editions
+            });
           });
         });
       });
@@ -258,7 +258,7 @@ function initSocket(socket, userId) {
       user.name = helpers.stripHTML(data.userName);
       db.setUserName(userId, user.name);
 
-      db.getWhiteCards(data.roomId, 7, cards => {
+      db.getWhiteCards(data.roomId, userId, 7, cards => {
         if (cards.error) {
           console.log("Room ID: " + data.roomId + " valid? ", helpers.validateUInt(data.roomId));
           console.warn("Failed to get white cards for new user #" + userId + ":", cards.error);
@@ -375,26 +375,31 @@ function initSocket(socket, userId) {
               return fn({error: "MySQL Error"});
             }
 
+            console.debug("Setup room #" + user.roomId + " with edition '" + data.edition + "'");
+
             // Get starting white cards
-            db.getWhiteCards(user.roomId, handSize * response.userIds.length, cards => {
+            db.getWhiteCards(user.roomId, userId, handSize, cards => {
               if (cards.error) {
                 console.warn("Failed to get starting cards for room #" + user.roomId + ":", cards.error);
                 return fn(cards);
               }
+              fn({cards: cards});
+            });
 
-              console.debug("Setup room #" + user.roomId + " with edition '" + data.edition + "'");
-              fn({cards: cards.slice(0, handSize)});
+            response.userIds.forEach(roomUserId => {
+              if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
+              if (!response.users[roomUserId].name || !response.users[roomUserId].icon) return;
 
-              var userNum = 1;
-              response.userIds.forEach(roomUserId => {
-                if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
-                if (!response.users[roomUserId].name || !response.users[roomUserId].icon) return;
+              db.getWhiteCards(user.roomId, roomUserId, handSize, cards => {
+                if (cards.error) {
+                  console.warn("Failed to get starting cards for user #" + roomUserId + ":", cards.error);
+                  cards = {};
+                }
                 users[roomUserId].socket.emit("roomSettings", {
                   edition: data.edition,
                   rotateCzar: rotateCzar,
-                  cards: cards.slice(userNum * handSize, userNum * handSize + 7)
+                  cards: cards
                 });
-                userNum++;
               });
             });
           });

@@ -9,6 +9,8 @@ var userId;
 var users = {};
 var room;
 
+var cards = {};
+
 // Used to hide the "Link Copied" notification after a few seconds
 var copyLinkPersitTimer = null;
 var copyLinkFadeTimer = null;
@@ -645,10 +647,11 @@ function appendCard(card, target) {
 }
 
 // TODO: animate
-function addCardsToDeck(cards) {
-  cards.forEach(card => {
-    appendCard(card, $("#hand"));
-  });
+function addCardsToDeck(newCards) {
+  for (var cardId in newCards) {
+    cards[cardId] = newCards[cardId];
+    appendCard(newCards[cardId], $("#hand"));
+  }
 }
 
 $(".card").draggable(cardDragHandler);
