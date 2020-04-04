@@ -13,6 +13,9 @@ var room;
 var copyLinkPersitTimer = null;
 var copyLinkFadeTimer = null;
 
+// Used to track the expansions enabled in the room setup menu
+var expansionsSelected = [];
+
 /********************
  * Helper Functions *
  ********************/
@@ -204,8 +207,11 @@ function addExpansionSelector(id, name) {
     var target = $("#expansion-" + id);
     if (target.hasClass("selected")) {
       target.removeClass("selected");
+      var expansionIndex = expansionsSelected.indexOf(id);
+      if (expansionIndex > -1) expansionsSelected.splice(expansionIndex, 1);
     } else {
       target.addClass("selected");
+      expansionsSelected.push(id);
     }
   });
 }
@@ -350,10 +356,9 @@ socket.on("init", data => {
       roomId: roomId,
       token: roomToken
     }, response => {
-      $("#setup-spinner").hide();
-
       if (response.error) {
         console.warn("Failed to join room #" + roomId + ":", response.error);
+        $("#setup-spinner").hide();
         resetRoomMenu();
         populateIconSelector(data.icons);
         return;
@@ -366,6 +371,8 @@ socket.on("init", data => {
       room = response.room;
       room.link = window.location.href;
       populateChat(room.messages);
+
+      $("#setup-spinner").hide();
     });
   } else {
     populateIconSelector(data.icons);
@@ -385,6 +392,12 @@ socket.on("userLeft", data => {
   if (data.message) addMessage(data.message);
   users[data.userId].roomId = null;
 })
+
+socket.on("roomSettings", data => {
+  console.debug("Room has been set to " + data.edition + " edition!");
+  room.edition = data.edition;
+  room.rotateCzar = data.rotateCzar;
+});
 
 window.addEventListener("beforeunload", (event) => {
   socket.emit("userLeft");
@@ -434,15 +447,23 @@ $("#set-username").submit(event => {
     socket.emit("createRoom", {
       userName: userName
     }, response => {
-      $("#setup-spinner").hide();
-
       if (response.error) {
+        $("#setup-spinner").hide();
         $("#set-username").show();
         return console.error("Failed to create room:", response.error);
       }
 
       room = response.room;
       user.name = userName;
+
+      // Clear and cache the edition menu in order to re-populate it
+      var editionMenu = $("#select-edition");
+      editionMenu.empty();
+
+      // Populate the edition selection menu
+      for (var edition in response.editions) {
+        editionMenu.append(`<option value="${edition}">${response.editions[edition]}</option>`);
+      }
 
       console.debug("Created room #" + room.id);
 
@@ -471,6 +492,8 @@ $("#set-username").submit(event => {
       window.history.pushState(null, null, room.link);
 
       populateChat(room.messages);
+
+      $("#setup-spinner").hide();
     });
   }
 });
@@ -480,7 +503,32 @@ $("#start-game").click(event => {
 
   console.debug("Starting game...");
 
-  $("#overlay-container").hide();
+  $("#room-settings").hide();
+  $("#setup-spinner").show();
+
+  var title = $("#settings-title");
+  title.children("h1").text("Configuring Room...");
+  title.children("p").text("Please wait a second.");
+  title.show();
+
+  var edition = $("#select-edition").val();
+  var rotateCzar = $("#select-czar").val() == "rotate";
+
+  socket.emit("roomSettings", {
+    edition: edition,
+    rotateCzar: rotateCzar,
+    expansions: expansionsSelected
+  }, response => {
+    $("#setup-spinner").hide();
+
+    if (response.error) {
+      $("#room-settings").show();
+      $("#settings-title").hide();
+      return console.warn("Failed to setup room:", response.error);
+    }
+    $("#overlay-container").hide();
+  });
+
 });
 
 $("#room-link").click(event => {

@@ -119,7 +119,7 @@ function getRoomUsers(roomId, fn) {
   ],(err, results, fields) => {
     if (err) {
       console.warn("Failed to get users for room #" + roomId + ":", err);
-      return fn({error: err});
+      return fn({error: "MySQL Error"});
     }
 
     var roomUsers = {};
@@ -138,9 +138,8 @@ function getRoomUsers(roomId, fn) {
   });
 }
 
-function getRoomWithToken(roomId, token, fn) {
+function getRoom(roomId, fn) {
   if (!roomId) return fn({error: "Room ID is required"});
-  else if (!validateHash(token, 8)) return fn({error: "Token is required"});
   var sql = `
     SELECT token, edition, rotate_czar as rotateCzar
     FROM rooms
@@ -151,18 +150,25 @@ function getRoomWithToken(roomId, token, fn) {
   ],(err, results, fields) => {
     if (err) {
       console.warn("Failed to get room #" + roomId + ":", err);
-      return fn({error: err});
+      return fn({error: "MySQL Error"});
     } else if (results.length == 0) {
       return fn({error: "Invalid Room ID"});
-    } else if (results[0].token != token) {
-      return fn({error: "Invalid Token"});
     }
     fn({
       id: roomId,
-      token: token,
+      token: results[0].token,
       edition: results[0].edition,
       rotateCzar: results[0].rotateCzar
     });
+  });
+}
+
+function getRoomWithToken(roomId, token, fn) {
+  if (!validateHash(token, 8)) return fn({error: "Token is required"});
+  getRoom(roomId, room => {
+    if (room.error) return fn(room);
+    if (room.token != token) return fn({error: "Invalid Token"});
+    return fn(room);
   });
 }
 
@@ -186,7 +192,7 @@ function getRoomMessages(roomId, limit, fn) {
   ],(err, results, fields) => {
     if (err) {
       console.warn("Failed to get messages for room #" + roomId + ":", err);
-      return fn({error: err});
+      return fn({error: "MySQL Error"});
     }
     var roomMessages = {};
 
@@ -204,7 +210,7 @@ function getRoomMessages(roomId, limit, fn) {
 }
 
 function createMessage(userId, content, isSystemMsg, fn) {
-  var user = getUser(userId);
+  var user = getUser(userId, true);
   if (user.error) return fn(user);
   if (!validateString(content)) return fn({error: "Invalid Message"});
 
@@ -219,7 +225,7 @@ function createMessage(userId, content, isSystemMsg, fn) {
   ], (err, result) => {
     if (err) {
       console.warn("Failed to create message:", err);
-      return fn({error: err});
+      return fn({error: "MySQL Error"});
     }
     var msgId = result.insertId;
 
@@ -322,7 +328,7 @@ function initSocket(socket, userId) {
     if (user.roomId) {
       getRoomUsers(user.roomId, response => {
         if (response.error) {
-          console.warn("Failed to get room users when setting icon:", response.error);
+          console.warn("Failed to get users for room #" + user.roomId);
           return fn({error: "Room error"});
         }
 
@@ -366,13 +372,12 @@ function initSocket(socket, userId) {
 
     var token = makeHash(8);
 
-    db.query(`INSERT INTO rooms (token, edition) VALUES (?, ?);`, [
-      token,
-      "AU"
+    db.query(`INSERT INTO rooms (token) VALUES (?);`, [
+      token
     ], (err, result) => {
       if (err) {
         console.warn("Failed to create room:", err);
-        return fn({error: err});
+        return fn({error: "MySQL Error"});
       }
 
       var roomId = result.insertId;
@@ -392,14 +397,27 @@ function initSocket(socket, userId) {
 
       setUserName(userId, user.name);
 
-      // Wait for the join message to be created before sending a response
-      createMessage(userId, "created the room", true, message => {
-        if (message.error) console.warn("Failed to create join message:", message.error);
-        console.log("Created room #" + roomId + " for user #" + userId);
+      // Get a list of editions to give the client
+      db.query(`SELECT id, name FROM versions WHERE type = 'base';`, (err, results) => {
+        if (err) {
+          console.warn("Failed to retrieve edition list when creating room:", err);
+          return fn({error: "MySQL Error"});
+        }
 
-        // Add the creation message to the room and send it to the client
-        room.messages[message.id] = message;
-        fn({room: room});
+        var editions = {};
+        results.forEach(result => editions[result.id] = result.name);
+
+        // Wait for the join message to be created before sending a response
+        createMessage(userId, "created the room", true, message => {
+          if (message.error) console.warn("Failed to create join message:", message.error);
+          else room.messages[message.id] = message;
+
+          console.log("Created room #" + roomId + " for user #" + userId);
+          fn({
+            room: room,
+            editions: editions
+          });
+        });
       });
     });
   });
@@ -414,8 +432,8 @@ function initSocket(socket, userId) {
       // Do this before getting messages since it doubles as a check for room validity
       getRoomUsers(room.id, response => {
         if (response.error) {
-          console.warn("Failed to get user ids when joining room #" + room.id + ":", response.error);
-          return fn({error: err});
+          console.warn("Failed to get user ids when joining room #" + room.id);
+          return fn(response);
         } if (response.userIds == 0) {
           return fn({error: "Can't join empty or invalid room"});
         }
@@ -477,7 +495,7 @@ function initSocket(socket, userId) {
 
     getRoomUsers(data.roomId, response => {
       if (response.error) {
-        console.warn("Failed to get user list for room #" + data.roomId + ":", response.error);
+        console.warn("Failed to get user list for room #" + data.roomId);
         return fn({error: "Unexpected error"});
       } else if (response.userIds.length == 0) {
         return fn({error: "Invalid Room"});
@@ -513,13 +531,13 @@ function initSocket(socket, userId) {
   });
 
   socket.on("userLeft", (data) => {
-    var user = getUser(userId);
+    var user = getUser(userId, true);
     if (user.error) return;
 
     var activeUsers = 0;
 
     getRoomUsers(user.roomId, response => {
-      if (response.error) return console.warn("Failed to get user list when leaving room:", response.error);
+      if (response.error) return console.warn("Failed to get user list when leaving room #" + user.roomId);
       else if (response.userIds.length == 0) {
         user.roomId = null;
         return;
@@ -561,12 +579,63 @@ function initSocket(socket, userId) {
     });
   });
 
+  // TODO: expansions!
+  socket.on("roomSettings", (data, fn) => {
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+
+    // Validate the edition
+    db.query(`SELECT id FROM versions WHERE id = ? AND type = 'base';`, [
+      data.edition
+    ], (err, result, fields) => {
+      if (err) {
+        console.warn("Failed to get edition '" + data.edition + "' from versions table:", err);
+        return fn({error: "MySQL Error"});
+      } else if (result.length == 0) return fn({error: "Invalid Edition"});
+
+      getRoom(user.roomId, room => {
+        if (room.error) return fn(room);
+        else if (room.edition) return fn({error: "Room is already setup!"});
+
+        getRoomUsers(user.roomId, response => {
+          if (response.error) {
+            console.warn("Failed to get users when configuring room #" + user.roomId);
+            return fn(response);
+          } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+          var rotateCzar = data.rotateCzar == true;
+
+          db.query(`UPDATE rooms SET edition = ?, rotate_czar = ? WHERE id = ?;`, [
+            data.edition,
+            rotateCzar,
+            user.roomId
+          ], (err, result) => {
+            if (err) {
+              console.warn("Failed to apply room settings:", err);
+              return fn({error: "MySQL Error"});
+            }
+
+            fn({});
+
+            response.userIds.forEach(userId => {
+              if (!users.hasOwnProperty(userId)) return;
+              users[userId].socket.emit("roomSettings", {
+                edition: data.edition,
+                rotateCzar: rotateCzar
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
   /***************
    * Chat System *
    ***************/
 
   socket.on("chatMessage", (data, fn) => {
-    var user = getUser(userId);
+    var user = getUser(userId, true);
     if (user.error) return fn(user);
     if (!validateString(data.content)) return fn({error: "Invalid Message"});
 
@@ -574,7 +643,7 @@ function initSocket(socket, userId) {
       fn({message: message});
 
       getRoomUsers(user.roomId, response => {
-        if (response.error) return console.warn("Failed to get room users:", response.error);
+        if (response.error) return console.warn("Failed to get users for room #" + user.roomId);
         response.userIds.forEach(roomUserId => {
           if (!users.hasOwnProperty(roomUserId)) return;
           var socketUser = users[roomUserId];
@@ -589,9 +658,8 @@ function initSocket(socket, userId) {
   });
 
   socket.on("likeMessage", (data, fn) => {
-    var user = getUser(userId);
+    var user = getUser(userId, true);
     if (user.error) return fn(user);
-    if (!user.roomId) return fn({error: "Not in a room"});
 
     // We need to check that the user is actually in the room 
     // where the message was sent and, that it isn't a system message
@@ -606,7 +674,7 @@ function initSocket(socket, userId) {
     ],(err, msgInfo, fields) => {
       if (err) {
         console.warn("Failed to get msg #" + data.msgId + ":", err);
-        return fn({error: err});
+        return fn({error: "MySQL Error"});
       } else if (msgInfo.length == 0) {
         return fn({error: "Invalid Message ID"});
       } else if (msgInfo[0].system_msg == 1) {
@@ -620,12 +688,12 @@ function initSocket(socket, userId) {
       ], (err, insertResult) => {
         if (err) {
           console.warn("Failed to add like:", err);
-          return fn({error: err});
+          return fn({error: "MySQL Error"});
         }
         fn({});
 
         getRoomUsers(user.roomId, response => {
-          if (response.error) return console.warn("Failed to get room user ids:", response.error);
+          if (response.error) return console.warn("Failed to get user ids for room #" + user.roomId);
           response.userIds.forEach(roomUserId => {
             if (!users.hasOwnProperty(roomUserId)) return;
             var socketUser = users[roomUserId];
@@ -641,9 +709,8 @@ function initSocket(socket, userId) {
   });
 
   socket.on("unlikeMessage", (data, fn) => {
-    var user = getUser(userId);
+    var user = getUser(userId, true);
     if (user.error) return fn(user);
-    if (!user.roomId) return fn({error: "Not in a room!"});
 
     db.query(`DELETE FROM message_likes WHERE message_id = ? AND user_id = ?;`, [
       data.msgId,
@@ -651,7 +718,7 @@ function initSocket(socket, userId) {
     ], (err, result) => {
       if (err) {
         console.warn("Failed to remove like:", err);
-        return fn({error: err});
+        return fn({error: "MySQL Error"});
       } else if (result.affectedRows == 0) {
         return fn({error: "Can't unlike a message that hasn't been liked!"})
       }
@@ -659,7 +726,7 @@ function initSocket(socket, userId) {
 
       // Inform other active users that the like was removed
       getRoomUsers(user.roomId, response => {
-        if (response.error) return console.warn("Failed to get room user ids:", response.error);
+        if (response.error) return console.warn("Failed to get users for room #" + user.roomId);
         response.userIds.forEach(roomUserId => {
           if (!users.hasOwnProperty(roomUserId)) return;
           var socketUser = users[roomUserId];

@@ -1,8 +1,8 @@
 USE `cah-online`;
 
-# DROP TABLE IF EXISTS room_white_cards, room_black_cards;
-# DROP TABLE IF EXISTS message_likes, messages;
-# DROP TABLE IF EXISTS rooms, users;
+DROP TABLE IF EXISTS room_white_cards, room_black_cards;
+DROP TABLE IF EXISTS message_likes, messages, room_users, black_cards_link, white_cards_link;
+DROP TABLE IF EXISTS rooms, users, black_cards, white_cards;
 
 CREATE table versions (
 	id VARCHAR(8) NOT NULL,
@@ -49,7 +49,7 @@ CREATE TABLE users (
 CREATE TABLE rooms (
 	id INT NOT NULL AUTO_INCREMENT,
 	token VARCHAR(8) NOT NULL,
-	edition VARCHAR(8) NOT NULL,
+	edition VARCHAR(8),
 	rotate_czar BOOLEAN DEFAULT FALSE,
 	PRIMARY KEY (id)
 );
@@ -110,7 +110,6 @@ INSERT INTO versions (id, name, type) VALUES
 	( 'CA', 'Canadian Edition', 'base' ),
 	( 'AU', 'Australian Edition', 'base' ),
 	( 'INTL', 'International Edition', 'base' ),
-	( 'LAB', 'Online Edition', 'base' ),
 	( 'KS', 'Kickstarter Edition', 'base' ),
 	( 'RED', 'Red Box', 'box' ),
 	( 'GREEN', 'Green Box', 'box' ),
