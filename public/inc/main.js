@@ -9,6 +9,10 @@ var userId;
 var users = {};
 var room;
 
+// Used to hide the "Link Copied" notification after a few seconds
+var copyLinkPersitTimer = null;
+var copyLinkFadeTimer = null;
+
 /********************
  * Helper Functions *
  ********************/
@@ -360,6 +364,7 @@ socket.on("init", data => {
 
       users = response.users;
       room = response.room;
+      room.link = window.location.href;
       populateChat(room.messages);
     });
   } else {
@@ -462,8 +467,8 @@ $("#set-username").submit(event => {
         addExpansionSelector(expansion, expansions[expansion]);
       }
 
-      var roomLink = window.location.href.split("?")[0] + "?room=" + room.id + "&token=" + room.token;
-      window.history.pushState(null, null, roomLink);
+      room.link = window.location.href.split("?")[0] + "?room=" + room.id + "&token=" + room.token;
+      window.history.pushState(null, null, room.link);
 
       populateChat(room.messages);
     });
@@ -476,6 +481,31 @@ $("#start-game").click(event => {
   console.debug("Starting game...");
 
   $("#overlay-container").hide();
+});
+
+$("#room-link").click(event => {
+  if (!room.link) return console.warn("Not in a room!");
+
+  // Actually copy the link
+  $("body").append(`<textarea id="fake-for-copy" readonly>${room.link}</textarea>`);
+  var fake = $("#fake-for-copy")[0];
+  fake.select();
+  document.execCommand("copy");
+  fake.remove();
+
+  // "Link Copied!" notification logic
+  $("#link-copy-notification").show().css("opacity", 100).removeClass("visible");
+  clearTimeout(copyLinkFadeTimer);
+  clearTimeout(copyLinkPersitTimer);
+  copyLinkPersitTimer = setTimeout(() => {
+    $("#link-copy-notification").css("opacity", 0).addClass("visible");
+    clearTimeout(copyLinkFadeTimer);
+    copyLinkFadeTimer = setTimeout(() => {
+      if ($("#link-copy-notification").hasClass("visible")) {
+        $("#link-copy-notification").removeClass("visible").hide();
+      }
+    }, 2000);
+  }, 1000);
 });
 
 /***************

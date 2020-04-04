@@ -7,10 +7,12 @@ $cardSpacing: 2px;
 
 $handWidth: 7 * ($cardWidth * $cardScale + 2 * $cardSpacing);
 $minHandMargin: 400px;
+$firstTransitionWidth: $handWidth + $minHandMargin;
 
 $outlineColor: #9c9c9c;
 $contrastColor: #ffd200;
 $iconBackground: #ededed;
+$systemMsgColor: #636363;
 
 $resizeTransition: 0.2s ease;
 
@@ -85,7 +87,7 @@ input[type=text] {
 		z-index: 5;
 		padding: 10px;
 
-		@media only screen and (max-width: $handWidth + $minHandMargin) {
+		@media only screen and (max-width: $firstTransitionWidth) {
 			right: 0;
 			top: 0;
 			border-top: 0;
@@ -99,9 +101,89 @@ input[type=text] {
 			width: 25%;
 		}
 
-		h1 {
-			font-size: 1.3em;
-			margin: 3px 0;
+		#chat-header {
+			h1 {
+				display: inline;
+				font-size: 1.3em;
+				margin: 3px 0;
+			}
+
+			#room-link {
+				float: right;
+				display: block;
+				margin: 2px 2px;
+				color: black;
+				font-size: 20px;
+				cursor: pointer;
+
+				&:hover {
+					color: $systemMsgColor;
+					margin: 1px 1px;
+					font-size: 22px;
+				}
+
+				&:active {
+					margin: 0px 0px;
+					font-size: 24px;
+				}
+			}
+
+			#link-copy-notification {
+				position: absolute;
+				top: -45px;
+				right: -10px;
+				background-color: white;
+				padding: 10px 15px;
+				border-radius: 10px;
+				font-weight: 700;
+				border: 2px solid $outlineColor;
+				z-index: 10;
+
+				&.visible {
+					transition: opacity 2s ease-out;
+				}
+
+				&:before,
+				&:after {
+				    content: "";
+				    position:absolute;
+				    bottom: -10px;
+				    right: 20px;
+				    z-index:12;
+				    width: 0;
+				    height: 0;
+				    border: solid 10px transparent;
+				    border-bottom: 0;
+				    border-top-color: white;
+				}
+				&:before {
+				    bottom:-12px;
+				    z-index:11;
+				    border-top-color: $outlineColor;
+				}
+
+				@media only screen and (max-width: $firstTransitionWidth) {
+					top: 5px;
+					right: 45px;
+					padding: 7px;
+					border-radius: 0;
+
+					&:before,
+					&:after {
+							top: 8px;
+							right: -6px;
+					    bottom: auto;
+					    border: solid 8px transparent;
+					    border-right: 0;
+					    border-left-color: white;
+					}
+
+					&:before {
+						right: -10px;
+				    border-left-color: $outlineColor;
+					}
+				}
+			}
 		}
 
 		#chat-history {
@@ -152,7 +234,7 @@ input[type=text] {
 				&.system-msg .msg-content {
 					h2, p {
 						font-style: italic;
-						color: #636363;
+						color: $systemMsgColor;
 					}
 				}
 
@@ -268,7 +350,7 @@ input[type=text] {
 			border-bottom: none;
 			transition: $resizeTransition;
 
-			@media only screen and (max-width: $handWidth + $minHandMargin) {
+			@media only screen and (max-width: $firstTransitionWidth) {
 				width: 100%;
 				left: 0;
 				right: 0;
@@ -311,7 +393,7 @@ input[type=text] {
 			top: 10%;
 			transition: $resizeTransition;
 
-			@media only screen and (max-width: $handWidth + $minHandMargin) {
+			@media only screen and (max-width: $firstTransitionWidth) {
 				left: 20px;
 				top: 20px;
 				transition: $resizeTransition;
