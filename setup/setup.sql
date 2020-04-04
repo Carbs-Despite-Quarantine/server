@@ -1,5 +1,9 @@
 USE `cah-online`;
 
+# DROP TABLE IF EXISTS room_white_cards, room_black_cards;
+# DROP TABLE IF EXISTS message_likes, messages;
+# DROP TABLE IF EXISTS rooms, users;
+
 CREATE table versions (
 	id VARCHAR(8) NOT NULL,
 	name VARCHAR(32) NOT NULL,
@@ -44,7 +48,9 @@ CREATE TABLE users (
 
 CREATE TABLE rooms (
 	id INT NOT NULL AUTO_INCREMENT,
+	token VARCHAR(8) NOT NULL,
 	edition VARCHAR(8) NOT NULL,
+	rotate_czar BOOLEAN DEFAULT FALSE,
 	PRIMARY KEY (id)
 );
 

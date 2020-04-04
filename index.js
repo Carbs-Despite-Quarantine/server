@@ -23,8 +23,8 @@ var users = {}
  * Data Validation *
  *******************/
 
-function validateHash(id) {
-  return typeof id === "string" && id.length === 16;
+function validateHash(hash, length) {
+  return typeof hash === "string" && hash.length === length;
 }
 
 function validateUInt(uint) {
@@ -138,6 +138,34 @@ function getRoomUsers(roomId, fn) {
   });
 }
 
+function getRoomWithToken(roomId, token, fn) {
+  if (!roomId) return fn({error: "Room ID is required"});
+  else if (!validateHash(token, 8)) return fn({error: "Token is required"});
+  var sql = `
+    SELECT token, edition, rotate_czar as rotateCzar
+    FROM rooms
+    WHERE id = ?;
+  `;
+  db.query(sql, [
+    roomId
+  ],(err, results, fields) => {
+    if (err) {
+      console.warn("Failed to get room #" + roomId + ":", err);
+      return fn({error: err});
+    } else if (results.length == 0) {
+      return fn({error: "Invalid Room ID"});
+    } else if (results[0].token != token) {
+      return fn({error: "Invalid Token"});
+    }
+    fn({
+      id: roomId,
+      token: token,
+      edition: results[0].edition,
+      rotateCzar: results[0].rotateCzar
+    });
+  });
+}
+
 function getRoomMessages(roomId, limit, fn) {
   var sql = `
     SELECT 
@@ -229,12 +257,12 @@ function getUser(userId, requireRoom=false) {
  * Helper Functions *
  ********************/
 
-// generate a random hash with 64 bits of entropy
-function hash64() {
+// generate a random hash
+function makeHash(length) {
   var result = "";
-  var hexChars = "0123456789abcdef";
-  for (var i = 0; i < 16; i += 1) {
-    result += hexChars[Math.floor(Math.random() * 16)];
+  var hexChars = "0123456789abcdefghijklmnopqrstuvwxyz";
+  for (var i = 0; i < length; i += 1) {
+    result += hexChars[Math.floor(Math.random() * hexChars.length)];
   }
   return result;
 }
@@ -336,7 +364,10 @@ function initSocket(socket, userId) {
 
     if (!validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    db.query(`INSERT INTO rooms (edition) VALUES (?);`, [
+    var token = makeHash(8);
+
+    db.query(`INSERT INTO rooms (token, edition) VALUES (?, ?);`, [
+      token,
       "AU"
     ], (err, result) => {
       if (err) {
@@ -350,6 +381,7 @@ function initSocket(socket, userId) {
       // Create the room
       var room = {
         id: roomId,
+        token: token,
         users: [userId],
         messages: {}
       };
@@ -376,61 +408,61 @@ function initSocket(socket, userId) {
   socket.on("joinRoom", (data, fn) => {
     var user = getUser(userId);
     if (user.error) return fn(user);
+    getRoomWithToken(data.roomId, data.token, room => {
+      if (room.error) return fn(room);
 
-    // Do this before getting messages since it doubles as a check for room validity
-    getRoomUsers(data.roomId, response => {
-      if (response.error) {
-        console.warn("Failed to get user ids when joining room #" + data.roomId + ":", response.error);
-        return fn({error: err});
-      } if (response.userIds == 0) {
-        return fn({error: "Can't join empty or invalid room"});
-      }
-
-      // Cache the user lists so wse can reuse the response variable
-      var roomUsers = response.users;
-      var roomUserIds = response.userIds;
-
-      // Add the client to the user list
-      roomUsers[userId] = {
-        id: userId,
-        icon: user.icon,
-        name: user.name,
-        roomId: data.roomId
-      };
-      roomUserIds.push(userId);
-
-      getRoomMessages(data.roomId, 15, response => {
-        var messages;
+      // Do this before getting messages since it doubles as a check for room validity
+      getRoomUsers(room.id, response => {
         if (response.error) {
-          console.warn("failed to get latest messages from room #" + data.roomId + ": " + response.error);
-          messages = {};
-        } else {
-          messages = response.messages;
+          console.warn("Failed to get user ids when joining room #" + room.id + ":", response.error);
+          return fn({error: err});
+        } if (response.userIds == 0) {
+          return fn({error: "Can't join empty or invalid room"});
         }
 
-        // Add the user to the room
-        user.roomId = data.roomId;
-        addUserToRoom(userId, data.roomId);
+        // Cache the user lists so wse can reuse the response variable
+        var roomUsers = response.users;
+        var roomUserIds = response.userIds;
 
-        // Make aa list of the icons currently in use
-        var roomIcons = [];
+        // Add the client to the user list
+        roomUsers[userId] = {
+          id: userId,
+          icon: user.icon,
+          name: user.name,
+          roomId: room.id
+        };
+        roomUserIds.push(userId);
 
-        roomUserIds.forEach(roomUserId => {
-          var roomUser = roomUsers[roomUserId];
-          // If the user is active, add their icon to the list
-          if (roomUserId != userId && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == data.roomId && roomUser.icon) {
-            roomIcons.push(roomUser.icon)
+        getRoomMessages(room.id, 15, response => {
+          if (response.error) {
+            console.warn("failed to get latest messages from room #" + room.id + ": " + response.error);
+            room.messages = {};
+          } else {
+            room.messages = response.messages;
           }
-        });
 
-        fn({
-          room: {
-            id: data.roomId,
-            users: roomUserIds,
-            messages: messages
-          },
-          users: roomUsers,
-          iconChoices: getAvailableIcons(roomIcons)
+          // Add the user to the room
+          user.roomId = room.id;
+          addUserToRoom(userId, room.id);
+
+          // Make aa list of the icons currently in use
+          var roomIcons = [];
+
+          roomUserIds.forEach(roomUserId => {
+            var roomUser = roomUsers[roomUserId];
+            // If the user is active, add their icon to the list
+            if (roomUserId != userId && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == data.roomId && roomUser.icon) {
+              roomIcons.push(roomUser.icon)    
+              // I'm not sure if we still need this on the client but it dosen't hurt
+              roomUsers[roomUserId].roomId = room.id;
+            }
+          });
+
+          fn({
+            room: room,
+            users: roomUsers,
+            iconChoices: getAvailableIcons(roomIcons)
+          });
         });
       });
     });

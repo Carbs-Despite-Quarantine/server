@@ -330,6 +330,7 @@ socket.on("init", data => {
   userId = data.userId;
 
   var roomId = getURLParam("room");
+  var roomToken = getURLParam("token");
 
   users[userId] = {
     id: userId,
@@ -338,11 +339,12 @@ socket.on("init", data => {
   };
 
   if (roomId) {
-    console.debug("Trying to join room #" + roomId);
+    console.debug("Trying to join room #" + roomId + " with token #" + roomToken);
     $("#set-username-submit").attr("value", "Join Room");
 
     socket.emit("joinRoom", {
-      roomId: roomId
+      roomId: roomId,
+      token: roomToken
     }, response => {
       $("#setup-spinner").hide();
 
@@ -460,7 +462,7 @@ $("#set-username").submit(event => {
         addExpansionSelector(expansion, expansions[expansion]);
       }
 
-      var roomLink = window.location.href.split("?")[0] + "?room=" + room.id;
+      var roomLink = window.location.href.split("?")[0] + "?room=" + room.id + "&token=" + room.token;
       window.history.pushState(null, null, roomLink);
 
       populateChat(room.messages);
