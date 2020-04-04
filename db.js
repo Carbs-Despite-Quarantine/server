@@ -218,7 +218,16 @@ function getCards(roomId, black, count, fn) {
         FROM rooms
         WHERE id = ${roomId}
       )
-    ) AND id NOT IN (
+      UNION
+      SELECT id
+      FROM ${color}_cards
+      WHERE pack IN (
+        SELECT pack_id
+        FROM room_packs
+        WHERE room_id = ${roomId}
+      )
+    )
+    AND id NOT IN (
       SELECT card_id
       FROM room_${color}_cards
       WHERE room_id = ${roomId}

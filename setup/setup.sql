@@ -2,13 +2,18 @@ USE `cah-online`;
 
 DROP TABLE IF EXISTS room_white_cards, room_black_cards;
 DROP TABLE IF EXISTS message_likes, messages, room_users, black_cards_link, white_cards_link;
-DROP TABLE IF EXISTS rooms, users, black_cards, white_cards, versions;
+DROP TABLE IF EXISTS rooms, users, black_cards, white_cards, editions, packs;
 
-CREATE table versions (
+CREATE table editions (
 	id VARCHAR(8) NOT NULL,
 	name VARCHAR(32) NOT NULL,
-	type ENUM('base', 'box', 'pack') NOT NULL,
 	PRIMARY KEY (id)
+);
+
+CREATE table packs (
+	id VARCHAR(8) NOT NULL,
+	name VARCHAR(32) NOT NULL,
+	PRIMARY KEY(id)
 );
 
 CREATE TABLE black_cards ( 
@@ -81,6 +86,14 @@ CREATE TABLE message_likes (
 		ON DELETE CASCADE
 );
 
+CREATE TABLE room_packs (
+	room_id INT NOT NULL,
+	pack_id VARCHAR(8) NOT NULL,
+	FOREIGN KEY (room_id)
+		REFERENCES rooms (id)
+		ON DELETE CASCADE
+);
+
 CREATE TABLE room_black_cards (
 	room_id INT NOT NULL,
 	card_id INT NOT NULL,
@@ -100,16 +113,11 @@ CREATE TABLE room_white_cards (
 		ON DELETE CASCADE
 );
 
-INSERT INTO versions (id, name, type) VALUES
-	( 'US', 'American Edition', 'base' ),
-	( 'UK', 'UK Edition', 'base' ),
-	( 'CA', 'Canadian Edition', 'base' ),
-	( 'AU', 'Australian Edition', 'base' ),
-	( 'INTL', 'International Edition', 'base' ),
-	( 'KS', 'Kickstarter Edition', 'base' ),
-	( 'RED', 'Red Box', 'box' ),
-	( 'GREEN', 'Green Box', 'box' ),
-	( 'BLUE', 'Blue Box', 'box' ),
-	( 'ABSURD', 'Absurd Box', 'box' ),
-	( 'PROC', 'Procedural Box', 'box' )
+INSERT INTO editions (id, name) VALUES
+	( 'US', 'American Edition' ),
+	( 'UK', 'UK Edition' ),
+	( 'CA', 'Canadian Edition' ),
+	( 'AU', 'Australian Edition' ),
+	( 'INTL', 'International Edition' ),
+	( 'KS', 'Kickstarter Edition' )
 ;

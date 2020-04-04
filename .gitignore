@@ -7,3 +7,4 @@ node_modules
 prepros.config
 
 generated.sql
+setup/packs.js

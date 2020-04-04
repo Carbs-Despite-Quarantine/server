@@ -523,7 +523,7 @@ $("#start-game").click(event => {
   socket.emit("roomSettings", {
     edition: edition,
     rotateCzar: rotateCzar,
-    expansions: expansionsSelected
+    packs: expansionsSelected
   }, response => {
     $("#setup-spinner").hide();
 

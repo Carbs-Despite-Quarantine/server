@@ -11,6 +11,9 @@ const helpers = require("./helpers");
 // A selection of Font Awesome icons suitable for profile pictures
 const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
 
+// Contains the same packs as the database, but this is quicker to access for validation
+const packs = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA" ];
+
 // The number of white cards in a standard CAH hand
 const handSize = 7;
 
@@ -149,7 +152,7 @@ function initSocket(socket, userId) {
         db.setUserName(userId, user.name);
 
         // Get a list of editions to give the client
-        db.query(`SELECT id, name FROM versions WHERE type = 'base';`, (err, results) => {
+        db.query(`SELECT id, name FROM editions;`, (err, results) => {
           if (err) {
             console.warn("Failed to retrieve edition list when creating room:", err);
             return fn({error: "MySQL Error"});
@@ -339,13 +342,12 @@ function initSocket(socket, userId) {
     });
   });
 
-  // TODO: expansions!
   socket.on("roomSettings", (data, fn) => {
     var user = getUser(userId, true);
     if (user.error) return fn(user);
 
     // Validate the edition
-    db.query(`SELECT id FROM versions WHERE id = ? AND type = 'base';`, [
+    db.query(`SELECT name FROM editions WHERE id = ?;`, [
       data.edition
     ], (err, result, fields) => {
       if (err) {
@@ -375,38 +377,60 @@ function initSocket(socket, userId) {
               return fn({error: "MySQL Error"});
             }
 
-            console.debug("Setup room #" + user.roomId + " with edition '" + data.edition + "'");
+            var packsSQL = [];
+            var validPacks = [];
 
-            // Get starting white cards
-            db.getWhiteCards(user.roomId, userId, handSize, cards => {
-              if (cards.error) {
-                console.warn("Failed to get starting cards for room #" + user.roomId + ":", cards.error);
-                return fn(cards);
-              }
-              fn({cards: cards});
-            });
-
-            response.userIds.forEach(roomUserId => {
-              if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
-              if (!response.users[roomUserId].name || !response.users[roomUserId].icon) return;
-
-              db.getWhiteCards(user.roomId, roomUserId, handSize, cards => {
-                if (cards.error) {
-                  console.warn("Failed to get starting cards for user #" + roomUserId + ":", cards.error);
-                  cards = {};
+            if (data.packs.length > 0) {
+              data.packs.forEach(packId => {
+                if (packs.includes(packId)) {
+                  validPacks.push(packId);
+                  packsSQL.push(`(${user.roomId}, '${packId}')`);
                 }
-                users[roomUserId].socket.emit("roomSettings", {
-                  edition: data.edition,
-                  rotateCzar: rotateCzar,
-                  cards: cards
-                });
               });
-            });
+
+              var sql = `INSERT INTO room_packs (room_id, pack_id) VALUES `;
+              db.query(sql + packsSQL.join(", ") + ";", (err, result) => {
+                if (err) {
+                  console.warn("Failed to add packs to room #" + user.roomId + ":", err);
+                }
+                finishRoomSetup(userId, user.roomId, response, rotateCzar, data.edition, validPacks, fn);
+              });
+            } else finishRoomSetup(userId, user.roomId, response, rotateCzar, data.edition, [], fn);
           });
         });
       });
     });
   });
+
+  function finishRoomSetup(userId, roomId, roomUserInfo, rotateCzar, edition, packs, fn) {
+    console.debug("Setup room #" + roomId + " with edition '" + edition + "'");
+    // Get starting white cards
+    db.getWhiteCards(roomId, userId, handSize, cards => {
+      if (cards.error) {
+        console.warn("Failed to get starting cards for room #" + roomId + ":", cards.error);
+        return fn(cards);
+      }
+      fn({cards: cards});
+    });
+
+    roomUserInfo.userIds.forEach(roomUserId => {
+      if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
+      if (!roomUserInfo.users[roomUserId].name || !roomUserInfo.users[roomUserId].icon) return;
+
+      db.getWhiteCards(roomId, roomUserId, handSize, cards => {
+        if (cards.error) {
+          console.warn("Failed to get starting cards for user #" + roomUserId + ":", cards.error);
+          cards = {};
+        }
+        users[roomUserId].socket.emit("roomSettings", {
+          edition: edition,
+          packs: packs,
+          rotateCzar: rotateCzar,
+          cards: cards
+        });
+      });
+    });
+  }
 
   /***************
    * Chat System *
