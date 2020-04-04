@@ -471,28 +471,14 @@ $("#set-username").submit(event => {
         editionMenu.append(`<option value="${edition}">${response.editions[edition]}</option>`);
       }
 
+      for (var pack in response.packs) {
+        addExpansionSelector(pack, response.packs[pack]);
+      }
+
       console.debug("Created room #" + room.id);
 
-      $("#room-settings").show();
-      $("#settings-title").hide();
-
-      // TODO: get expansions from server
-      var expansions = {
-        RED: "Red Box", 
-        GREEN: "Green Box", 
-        BLUE: "Blue Box", 
-        ABSURD: "Absurd Box",
-        ASS: "Ass Pack", 
-        "2000s": "2000s Nostalgia Pack", 
-        PERIOD: "Period Pack",
-        PRIDE: "Pride Pack", 
-        THEATRE: "Theatre Pack", 
-        TRUMP: "Saves America Pack"
-      };
-
-      for (var expansion in expansions) {
-        addExpansionSelector(expansion, expansions[expansion]);
-      }
+      $("#room-setup-window").show();
+      $("#user-setup-window").hide();
 
       room.link = window.location.href.split("?")[0] + "?room=" + room.id + "&token=" + room.token;
       window.history.pushState(null, null, room.link);
@@ -509,7 +495,8 @@ $("#start-game").click(event => {
 
   console.debug("Starting game...");
 
-  $("#room-settings").hide();
+  $("#room-setup-window").hide();
+  $("#user-setup-window").show();
   $("#setup-spinner").show();
 
   var title = $("#settings-title");
@@ -528,8 +515,8 @@ $("#start-game").click(event => {
     $("#setup-spinner").hide();
 
     if (response.error) {
-      $("#room-settings").show();
-      $("#settings-title").hide();
+      $("#room-setup-window").show()
+      $("#user-setup-window").hide();
       return console.warn("Failed to setup room:", response.error);
     }
 

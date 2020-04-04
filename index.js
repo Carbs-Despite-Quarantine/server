@@ -161,15 +161,26 @@ function initSocket(socket, userId) {
           var editions = {};
           results.forEach(result => editions[result.id] = result.name);
 
-          // Wait for the join message to be created before sending a response
-          db.createMessage(userId, "created the room", true, message => {
-            if (message.error) console.warn("Failed to create join message:", message.error);
-            else room.messages[message.id] = message;
+          db.query(`SELECT id, name FROM packs ORDER BY RAND();`, (err, results) => {
+            if (err) {
+              console.warn("Failed to retrieve pack list when creating room:", err);
+              return fn({error: "MySQL Error"});
+            }
 
-            console.log("Created room #" + roomId + " for user #" + userId);
-            fn({
-              room: room,
-              editions: editions
+            var packs = {};
+            results.forEach(result => packs[result.id] = result.name);
+
+            // Wait for the join message to be created before sending a response
+            db.createMessage(userId, "created the room", true, message => {
+              if (message.error) console.warn("Failed to create join message:", message.error);
+              else room.messages[message.id] = message;
+
+              console.log("Created room #" + roomId + " for user #" + userId);
+              fn({
+                room: room,
+                editions: editions,
+                packs: packs
+              });
             });
           });
         });
