@@ -574,38 +574,114 @@ function initSocket(socket, userId) {
     });
   });
 
-  // TODO
-  socket.on("startReadAnswers", (data, fn) => {
-    // Get all the chosen cards for this round
-    db.query(`
-      SELECT id
-      FROM white_cards
-      WHERE id IN (
-        SELECT card_id
-        FROM room_white_cards
-        WHERE room_id = ? AND state = ${vars.CardStates.selected}                
-      );
-    `, [user.roomId], (err, results, fields) => {
-      if (err) {
-        return console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
-      } else if (results.length == 0) {
-        return console.warn("Didn't find any selected cards for room #" + user.roomId + " despite all players having submitted");
-      }
+  socket.on("startReadingAnswers", (data, fn) => {
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+    if (user.state != vars.UserStates.czar) {
+      console.warn("User #" + userId + " with state '" + user.state + "' tried to start reading answers!");
+      return fn({error: "Invalid User State"});
+    }
 
-      var cardChoices = {};
+    db.getRoom(user.roomId, room => {
+      if (room.error) return fn(room);
+      if (room.state != vars.RoomStates.choosingCards) return fn({error: "Invalid Room State"});
 
-      results.forEach(result => {
-        cardChoices[result.id] = {
-          id: result.id,
-          text: result.text
-        };
+      db.getRoomUsers(user.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get users when switching to reading mode in room #" + user.roomId);
+          return fn(response);
+        } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+
+        db.query(`
+          SELECT id
+          FROM white_cards
+          WHERE id IN (
+            SELECT card_id
+            FROM room_white_cards
+            WHERE room_id = ? AND state = ${vars.CardStates.selected}                
+          );
+        `, [user.roomId], (err, results, fields) => {
+          if (err) {
+            console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
+            return fn({error: "MySQL Error"});
+          } else if (results.length < 2) {
+            return fn({error: "Not enough cards selected!"});
+          }
+
+          fn({});
+          db.setRoomState(user.roomId, vars.RoomStates.readingCards);
+
+          response.userIds.forEach(roomUserId => {
+            if (!users.hasOwnProperty(roomUserId)) return;
+
+            users[roomUserId].socket.emit("startReadingAnswers", {
+              count: results.length
+            });
+          });
+        });
       });
+    });
+  });
 
-      response.userIds.forEach(roomUserId => {
-        if (!users.hasOwnProperty(roomUserId)) return;
+  socket.on("revealResponse", (data, fn) => {
+    if (!helpers.validateUInt(data.position)) return fn({error: "Invalid Card Position"});
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+    if (user.state != vars.UserStates.czar) {
+      console.warn("User #" + userId + " with state '" + user.state + "' tried to reveal a response!");
+      return fn({error: "Invalid User State"});
+    }
 
-        users[roomUserId].socket.emit("cardChoices", {
-          choices: cardChoices
+    db.getRoom(user.roomId, room => {
+      if (room.error) return fn(room);
+      if (room.state != vars.RoomStates.readingCards) return fn({error: "Invalid Room State"});
+
+      db.getRoomUsers(user.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get users when revealing card in room #" + user.roomId);
+          return fn(response);
+        } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+        db.query(`
+          SELECT id, text
+          FROM white_cards
+          WHERE id IN (
+            SELECT card_id
+            FROM room_white_cards
+            WHERE room_id = ? AND state = ${vars.CardStates.selected}                
+          )
+          ORDER BY RAND()
+          LIMIT 1;
+        `, [user.roomId], (err, results, fields) => {
+          if (err) {
+            console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
+            return fn({error: "MySQL Error"});
+          } else if (results.length == 0) {
+            return fn({error: "No cards left!"});
+          }
+
+          var card = {
+            id: results[0].id,
+            text: results[0].text
+          }
+
+          db.query(`UPDATE room_white_cards SET state = ${vars.CardStates.revealed} WHERE card_id = ? `,
+          [card.id], (err, results) => {
+            if (err) {
+              console.warn("Failed to mark card as read:", err);
+              return fn({error: "MySQL Error"});
+            }
+            fn({});
+            response.userIds.forEach(roomUserId => {
+              if (!users.hasOwnProperty(roomUserId)) return;
+              var socketUser = users[roomUserId];
+              socketUser.socket.emit("revealResponse", {
+                position: data.position,
+                card: card
+              });
+            });
+          });
         });
       });
     });

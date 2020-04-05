@@ -559,11 +559,6 @@ $("#set-username").submit(event => {
       populateUserList(users);
 
       $("#setup-spinner").hide();
-
-      // TODO: get cards from server
-      for (var i = 0; i < 4; i++) {
-        appendCardBack($("#response-cards"));
-      }
     });
   }
 });
@@ -685,6 +680,24 @@ socket.on("answersReady", () => {
   $("#central-action").show().text("Read Answers");
 });
 
+socket.on("startReadingAnswers", (data) => {
+  room.state = RoomStates.readingCards;
+  var isCzar = users[userId].state == UserStates.czar;
+
+  $("#cur-black-card").addClass("responses-shown");
+
+  for (var i = 0; i < data.count; i++) {
+    addResponseCard(i, isCzar);
+  }
+});
+
+socket.on("revealResponse", (data) => {
+  var cardElement = $("#response-card-" + data.position);
+  cardElement.removeClass("back").addClass("front");
+  cardElement.children(".card-text").text(data.card.text);
+  cardElement.attr("id", "response-revealed-" + data.card.id);
+});
+
 /********************
  * Card Interaction *
  ********************/
@@ -695,12 +708,25 @@ var selectedCard = null;
 // Set to true while waiting for a server response from selectCard
 var submittingCard = false;
 
-function appendCardBack(target, isWhite=true) {
+function appendCardBack(target, id, isWhite=true) {
   target.append(`
-    <div class="card ${isWhite ? "white" : "black"} back">
+    <div class="card ${isWhite ? "white" : "black"} back" id="${id}">
         <div class="card-text">Cards Against Quarantine</div>
       </div>
   `);
+}
+
+function addResponseCard(id, isCzar) {
+  appendCardBack($("#response-cards"), "response-card-" + id);
+
+  // Only the czar can reveal answers
+  if (isCzar) {
+    $("#response-card-" + id).click(event => {
+      socket.emit("revealResponse", {position: id}, response => {
+        if (response.error) return console.warn("Failed to reveal respose #" + id + ":", response.error);
+      });
+    });
+  }
 }
 
 function appendCard(card, target, isWhite=true) {
@@ -784,7 +810,10 @@ $("#central-action").click(event => {
   var curState = users[userId].state;
 
   if (curState == UserStates.czar) {
-    console.debug("do it !");
+    socket.emit("startReadingAnswers", {}, response => {
+      if (response.error) return console.warn("Failed to start reading answers:", response.error);
+      $("#central-action").hide();
+    });
   } else if (curState == UserStates.choosing) {
     submitCard();
   }

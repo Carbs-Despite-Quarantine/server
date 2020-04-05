@@ -23,6 +23,6 @@ exports.RoomStates = Object.freeze({
 exports.CardStates = Object.freeze({
   "hand": 1,          // The card is in a players hand
   "selected": 2,      // The card has been submitted
-  "read": 3,          // The card has been flipped over and read
+  "revealed": 3,      // The card has been flipped over and read
   "played": 4         // The card has been removed from play
 });

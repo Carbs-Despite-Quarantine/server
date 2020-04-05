@@ -277,6 +277,25 @@ input[type=text] {
 		.card {
 			margin: 10px;
 			transition: $resizeTransition;
+
+			.card-text::after {
+			  bottom: 112px;
+
+
+
+				@media only screen and (min-width: 1450px) {
+					bottom: 3px;
+				}
+				@media only screen and (min-width: 1550px) {
+					bottom: 8px;
+				}
+			}
+
+			&:hover {
+				.card-text::after {
+					bottom: 0;
+				}
+			}
 		}
 
 		@media only screen and (max-height: 850px) {
@@ -347,7 +366,6 @@ input[type=text] {
 				}
 				&:not(.czar-mode) {
 					top: calc(35% - #{$cardHeight * $cardScale / 2 - 37px});
-					background-color: red;
 				}
 			}
 
