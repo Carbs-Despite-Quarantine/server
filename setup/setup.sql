@@ -1,8 +1,11 @@
 USE `cah-online`;
 
+DROP TABLE IF EXISTS white_cards_link, black_cards_link, editions, packs;
+DROP TABLE IF EXISTS white_cards, black_cards;
+
 DROP TABLE IF EXISTS room_white_cards, room_black_cards;
-DROP TABLE IF EXISTS message_likes, messages, room_users, room_packs, black_cards_link, white_cards_link;
-DROP TABLE IF EXISTS rooms, users, black_cards, white_cards, editions, packs;
+DROP TABLE IF EXISTS message_likes, messages, room_packs;
+DROP TABLE IF EXISTS rooms, users;
 
 CREATE table editions (
 	id VARCHAR(8) NOT NULL,
@@ -44,13 +47,23 @@ CREATE table white_cards_link (
   PRIMARY KEY(card_id, edition)
 );
 
+INSERT INTO editions (id, name) VALUES
+	( 'US', 'American Edition' ),
+	( 'UK', 'UK Edition' ),
+	( 'CA', 'Canadian Edition' ),
+	( 'AU', 'Australian Edition' ),
+	( 'INTL', 'International Edition' ),
+	( 'KS', 'Kickstarter Edition' ),
+	( 'FAMILY', 'Family Edition' )
+;
+
 CREATE TABLE rooms (
 	id INT NOT NULL AUTO_INCREMENT,
 	token VARCHAR(8) NOT NULL,
 	edition VARCHAR(8),
 	rotate_czar BOOLEAN DEFAULT FALSE,
-	cur_czar INT NOT NULL,
 	cur_prompt INT,
+	state TINYINT NOT NULL DEFAULT 1,
 	PRIMARY KEY (id)
 );
 
@@ -60,6 +73,7 @@ CREATE TABLE users (
 	name VARCHAR(16),
 	icon VARCHAR(16),
 	score INT NOT NULL DEFAULT 0,
+	state TINYINT NOT NULL DEFAULT 1,
 	PRIMARY KEY (id),
 	FOREIGN KEY (room_id)
 		REFERENCES rooms (id)
@@ -110,18 +124,9 @@ CREATE TABLE room_white_cards (
 	room_id INT NOT NULL,
 	card_id INT NOT NULL,
 	user_id INT,
+	state TINYINT NOT NULL DEFAULT 1,
 	PRIMARY KEY (room_id, card_id),
 	FOREIGN KEY (room_id)
 		REFERENCES rooms (id)
 		ON DELETE CASCADE
 );
-
-INSERT INTO editions (id, name) VALUES
-	( 'US', 'American Edition' ),
-	( 'UK', 'UK Edition' ),
-	( 'CA', 'Canadian Edition' ),
-	( 'AU', 'Australian Edition' ),
-	( 'INTL', 'International Edition' ),
-	( 'KS', 'Kickstarter Edition' ),
-	( 'FAMILY', 'Family Edition' )
-;

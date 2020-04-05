@@ -5,17 +5,9 @@ const app = express();
 var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 
+const vars = require("./vars");
 const db = require("./db");
 const helpers = require("./helpers");
-
-// A selection of Font Awesome icons suitable for profile pictures
-const icons = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
-
-// Contains the same packs as the database, but this is quicker to access for validation
-const packs = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA" ];
-
-// The number of white cards in a standard CAH hand
-const handSize = 7;
 
 /**
  * User:
@@ -52,7 +44,7 @@ app.get("/status", (req, res) => {
 function getAvailableIcons(roomIcons) {
   var availableIcons = [];
 
-  icons.forEach(icon => {
+  vars.Icons.forEach(icon => {
     // Add all the unused icons to the final list
     if (!roomIcons.includes(icon))  availableIcons.push(icon);
   });
@@ -64,6 +56,11 @@ function getUser(userId, requireRoom=false) {
   if (!users.hasOwnProperty(userId)) return {error: "Invalid User"};
   if (requireRoom && !users[userId].roomId) return {error: "Not in a room"};
   return users[userId];
+}
+
+function setUserState(userId, state) {
+  users[userId].state = state;
+  db.setUserState(userId, state);
 }
 
 /********************
@@ -80,7 +77,7 @@ function finishSetupRoom(userId, roomId, roomUserInfo, rotateCzar, edition, pack
     console.debug("Setup room #" + roomId + " with edition '" + edition + "'");
 
     // Get starting white cards
-    db.getWhiteCards(roomId, userId, handSize, hand => {
+    db.getWhiteCards(roomId, userId, vars.HandSize, hand => {
       if (hand.error) {
         console.warn("Failed to get starting hand for room #" + roomId + ":", hand.error);
         return fn(hand);
@@ -102,11 +99,13 @@ function finishSetupRoom(userId, roomId, roomUserInfo, rotateCzar, edition, pack
         return users[roomUserId].socket.emit("roomSettings", roomSettings);
       };
 
-      db.getWhiteCards(roomId, roomUserId, handSize, hand => {
+      db.getWhiteCards(roomId, roomUserId, vars.HandSize, hand => {
         if (hand.error) {
           console.warn("Failed to get starting hand for user #" + roomUserId + ":", hand.error);
           hand = {};
         }
+        setUserState(roomUserId, vars.UserStates.choosing);
+
         roomSettings.hand = hand;
         users[roomUserId].socket.emit("roomSettings", roomSettings);
       });
@@ -114,23 +113,28 @@ function finishSetupRoom(userId, roomId, roomUserInfo, rotateCzar, edition, pack
   });
 }
 
-function finishEnterRoom(user, roomId, roomUserIds, hand, fn) {
+function finishEnterRoom(user, room, roomUserIds, hand, fn) {
   db.createMessage(user.id, "joined the room", true, message => {
     fn({message: message, hand: hand});
+
+    if (room.state == vars.RoomStates.choosingCards) {
+      setUserState(user.id, vars.UserStates.choosing);
+    }
 
     roomUserIds.forEach(roomUserId => {
       if (!users.hasOwnProperty(roomUserId)) return;
       var socketUser = users[roomUserId];
 
       // Send the new users info to all other active room users
-      if (roomUserId != user.id && socketUser.roomId == roomId) {
+      if (roomUserId != user.id && socketUser.roomId == room.id) {
         socketUser.socket.emit("userJoined", {
           user: {
             id: user.id,
             name: user.name,
             icon: user.icon,
             roomId: user.roomId,
-            score: user.score
+            score: user.score,
+            state: user.state
           },
           message: message
         });
@@ -159,7 +163,8 @@ function finishJoinRoom(user, room, fn) {
       icon: user.icon,
       name: user.name,
       roomId: room.id,
-      score: user.score
+      score: user.score,
+      state: user.state
     };
     roomUserIds.push(user.id);
 
@@ -173,7 +178,7 @@ function finishJoinRoom(user, room, fn) {
 
       // Add the user to the room
       user.roomId = room.id;
-      db.addUserToRoom(user.id, room.id);
+      db.addUserToRoom(user.id, room.id, vars.UserStates.idle);
 
       // Make aa list of the icons currently in use
       var roomIcons = [];
@@ -211,7 +216,7 @@ function initSocket(socket, userId) {
     var user = getUser(userId);
     if (user.error) return fn(user);
 
-    if (!icons.includes(data.icon)) return fn({error: "Invalid Icon"});
+    if (!vars.Icons.includes(data.icon)) return fn({error: "Invalid Icon"});
 
     db.setUserIcon(userId, data.icon);
 
@@ -262,9 +267,8 @@ function initSocket(socket, userId) {
 
     var token = helpers.makeHash(8);
 
-    db.query(`INSERT INTO rooms (token, cur_czar) VALUES (?, ?);`, [
-      token,
-      userId
+    db.query(`INSERT INTO rooms (token) VALUES (?);`, [
+      token
     ], (err, result) => {
       if (err) {
         console.warn("Failed to create room:", err);
@@ -272,19 +276,20 @@ function initSocket(socket, userId) {
       }
 
       var roomId = result.insertId;
-      db.addUserToRoom(userId, roomId, () => {
+      db.addUserToRoom(userId, roomId, vars.UserStates.czar, () => {
         // Used to represent the room on the client
         var room = {
           id: roomId,
           token: token,
-          curCzar: userId,
           users: [userId],
-          messages: {}
+          messages: {},
+          state: vars.RoomStates.new
         };
 
         // Update the users detaiils
         user.name = helpers.stripHTML(data.userName);
         user.roomId = roomId;
+        user.state = vars.UserStates.czar;
 
         db.setUserName(userId, user.name);
 
@@ -368,18 +373,18 @@ function initSocket(socket, userId) {
         user.name = helpers.stripHTML(data.userName);
         db.setUserName(userId, user.name);
 
-        if (room.edition) {
-          db.getWhiteCards(data.roomId, userId, 7, cards => {
+        if (room.state != vars.RoomStates.new) {
+          db.getWhiteCards(data.roomId, userId, vars.HandSize, cards => {
             if (cards.error) {
               console.log("Room ID: " + data.roomId + " valid? ", helpers.validateUInt(data.roomId));
               console.warn("Failed to get white cards for new user #" + userId + ":", cards.error);
               return fn(cards);
             }
 
-            finishEnterRoom(user, data.roomId, response.userIds, cards, fn);
+            finishEnterRoom(user, room, response.userIds, cards, fn);
           });
         } else {
-          finishEnterRoom(user, data.roomId, response.userIds, {}, fn);
+          finishEnterRoom(user, room, response.userIds, {}, fn);
         }
       });
     });
@@ -453,7 +458,7 @@ function initSocket(socket, userId) {
 
       db.getRoom(user.roomId, room => {
         if (room.error) return fn(room);
-        else if (room.edition) return fn({error: "Room is already setup!"});
+        else if (room.state != vars.RoomStates.new) return fn({error: "Room is already setup!"});
 
         db.getRoomUsers(user.roomId, response => {
           if (response.error) {
@@ -463,9 +468,10 @@ function initSocket(socket, userId) {
 
           var rotateCzar = data.rotateCzar == true;
 
-          db.query(`UPDATE rooms SET edition = ?, rotate_czar = ? WHERE id = ?;`, [
+          db.query(`UPDATE rooms SET edition = ?, rotate_czar = ?, state = ? WHERE id = ?;`, [
             data.edition,
             rotateCzar,
+            vars.RoomStates.choosingCards,
             user.roomId
           ], (err, result) => {
             if (err) {
@@ -478,7 +484,7 @@ function initSocket(socket, userId) {
 
             if (data.packs.length > 0) {
               data.packs.forEach(packId => {
-                if (packs.includes(packId)) {
+                if (vars.Packs.includes(packId)) {
                   validPacks.push(packId);
                   packsSQL.push(`(${user.roomId}, '${packId}')`);
                 }
@@ -493,6 +499,113 @@ function initSocket(socket, userId) {
               });
             } else finishSetupRoom(userId, user.roomId, response, rotateCzar, data.edition, [], fn);
           });
+        });
+      });
+    });
+  });
+
+  /********
+   * Game *
+   ********/
+
+  socket.on("submitCard", (data, fn) => {
+    if (!helpers.validateUInt(data.cardId)) return fn({error: "Invalid Card ID"});
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+
+    if (user.state != vars.UserStates.choosing) {
+      console.warn("A card was submitted from a user with invalid state '" + user.state + "'");
+      return fn({error: "Invalid State"});
+    }
+
+    db.getRoomUsers(user.roomId, response => {
+      if (response.error) {
+        console.warn("Failed to get users when submitting card in room #" + user.roomId);
+        return fn(response);
+      } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+      // We can validate the card simply by trying to update it and checking the number of rows affected
+      db.query(`
+        UPDATE room_white_cards 
+        SET state = ${vars.CardStates.selected} 
+        WHERE room_id = ? AND card_id = ? AND user_id = ? AND state = ${vars.CardStates.hand};
+      `,  [user.roomId, data.cardId, userId], (err, results, fields) => {
+        if (err) {
+          console.warn("Failed to submit card #" + data.cardId + ":", err);
+          return fn({error: "MySQL Error"});
+        } else if (results.affectedRows == 0) return fn({error: "Invalid Card"});
+
+        // Try to get a new white card to replace the one which was submitted
+        db.getWhiteCards(user.roomId, userId, 1, newCard => {
+          if (newCard.error || newCard.length == 0) {
+            console.warn("Failed to get new card for user #" + userId + ":", newCard.error);
+            fn({});
+          } else fn({newCard: newCard});
+
+          setUserState(userId, vars.UserStates.idle);
+
+          var cardCzar = null;
+          var activeUsers = 1;
+
+          // Check if all users have submitted a card
+          response.userIds.forEach(roomUserId => {
+            if (!users.hasOwnProperty(roomUserId) || roomUserId == userId) return;
+
+            var roomUser = response.users[roomUserId];
+            var socketUser = users[roomUserId];
+
+            activeUsers++;
+
+            if (roomUser.state == vars.UserStates.czar) {
+              if (cardCzar) console.warn("Multiple czars were found in room #" + user.roomId + "!");
+              cardCzar = socketUser;
+            }
+
+            socketUser.socket.emit("userState", {userId: userId, state: vars.UserStates.idle});
+          });
+
+          // At least three players are required for a round
+          if (activeUsers > 2) {
+            if (!cardCzar) return console.warn("No czar was found for room #" + user.roomId);
+            cardCzar.socket.emit("answersReady");
+          }
+        });         
+      });
+    });
+  });
+
+  // TODO
+  socket.on("startReadAnswers", (data, fn) => {
+    // Get all the chosen cards for this round
+    db.query(`
+      SELECT id
+      FROM white_cards
+      WHERE id IN (
+        SELECT card_id
+        FROM room_white_cards
+        WHERE room_id = ? AND state = ${vars.CardStates.selected}                
+      );
+    `, [user.roomId], (err, results, fields) => {
+      if (err) {
+        return console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
+      } else if (results.length == 0) {
+        return console.warn("Didn't find any selected cards for room #" + user.roomId + " despite all players having submitted");
+      }
+
+      var cardChoices = {};
+
+      results.forEach(result => {
+        cardChoices[result.id] = {
+          id: result.id,
+          text: result.text
+        };
+      });
+
+      response.userIds.forEach(roomUserId => {
+        if (!users.hasOwnProperty(roomUserId)) return;
+
+        users[roomUserId].socket.emit("cardChoices", {
+          choices: cardChoices
         });
       });
     });
@@ -626,13 +739,14 @@ io.on("connection", (socket) => {
       icon: null,
       roomId: null,
       score: 0,
+      state: vars.UserStates.idle,
       socket: socket
     };
 
     // Send the generated userId
     socket.emit("init", {
       userId: userId,
-      icons: icons
+      icons: vars.Icons
     });
 
     // Only register socket callbacks now that we have a userId

@@ -1,6 +1,10 @@
 const mysql = require("mysql");
 const helpers = require("./helpers");
 
+/**************
+ * Connection *
+ **************/
+
 var db = mysql.createConnection({
   host: process.env.MYSQL_HOST || "localhost",
   user: process.env.MYSQL_USER || "cah-online",
@@ -23,22 +27,41 @@ exports.query = (sql, params, fn) => {
  *********/
 
 exports.setUserIcon = (userId, icon) => {
-  db.query(`UPDATE users SET icon = ? WHERE id = ?;`, [
-    icon,
-    userId
-  ],(err, result) => {
+  db.query(`UPDATE users SET icon = ? WHERE id = ?;`, 
+  [icon, userId],(err, result) => {
     if (err) return console.warn("Failed to set icon for user #" + userId + ":", err);
     console.debug("Set icon for user #" + userId + " to '" + icon + "'");
   });
 };
 
 exports.setUserName = (userId, name) => {
-  db.query(`UPDATE users SET name = ? WHERE id = ?;`, [
-    name,
-    userId
-  ],(err, result) => {
+  db.query(`UPDATE users SET name = ? WHERE id = ?;`, 
+  [name, userId],(err, result) => {
     if (err) return console.warn("Failed to set name for user #" + userId + ":", err);
     console.debug("Set name for user #" + userId + " to '" + name + "'");
+  });
+};
+
+exports.setUserState = (userId, state) => {
+  db.query(`UPDATE users SET state = ? WHERE id = ?;`, 
+  [state, userId],(err, result) => {
+    if (err) return console.warn("Failed to set state for user #" + userId + ":", err);
+    console.debug("Set state for user #" + userId + " to '" + state + "'");
+  });
+};
+
+exports.addUserToRoom = (userId, roomId, state, fn=null) => {
+  db.query(`UPDATE users SET room_id = ?, state = ? WHERE id = ?;`, [
+    roomId,
+    state,
+    userId
+  ], (err, result) => {
+    if (err) {
+      if (fn) fn({error: "MySQL Error"});
+      return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
+    }
+    console.debug("Added user #" + userId + " to room #" + roomId + " with state '" + state + "'");
+    if (fn) fn({});
   });
 };
 
@@ -49,7 +72,7 @@ exports.setUserName = (userId, name) => {
 exports.getRoom = (roomId, fn) => {
   if (!roomId) return fn({error: "Room ID is required"});
   var sql = `
-    SELECT token, edition, rotate_czar as rotateCzar, cur_czar as curCzar, cur_prompt as curPrompt
+    SELECT token, edition, rotate_czar as rotateCzar, cur_prompt as curPrompt, state
     FROM rooms
     WHERE id = ?;
   `;
@@ -67,8 +90,8 @@ exports.getRoom = (roomId, fn) => {
       token: results[0].token,
       edition: results[0].edition,
       rotateCzar: results[0].rotateCzar,
-      curCzar: results[0].curCzar,
-      curPrompt: results[0].curPrompt
+      curPrompt: results[0].curPrompt,
+      state: results[0].state
     });
   });
 };
@@ -82,22 +105,8 @@ exports.getRoomWithToken = (roomId, token, fn) => {
   });
 };
 
-exports.addUserToRoom = (userId, roomId, fn=null) => {
-  db.query(`UPDATE users SET room_id = ? WHERE id = ?;`, [
-    roomId,
-    userId
-  ], (err, result) => {
-    if (err) {
-      if (fn) fn({error: "MySQL Error"});
-      return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
-    }
-    console.debug("Added user #" + userId + " to room #" + roomId);
-    if (fn) fn({});
-  });
-};
-
 exports.getRoomUsers = (roomId, fn) => {
-  db.query(`SELECT id, name, icon, score FROM users WHERE room_id = ?;`, [
+  db.query(`SELECT id, name, icon, score, state FROM users WHERE room_id = ?;`, [
     roomId
   ],(err, results, fields) => {
     if (err) {
@@ -115,7 +124,8 @@ exports.getRoomUsers = (roomId, fn) => {
         id: row.id,
         name: row.name,
         icon: row.icon,
-        score: row.score
+        score: row.score,
+        state: row.state
       };
     });
     fn({users: roomUsers, userIds: roomUserIds});
@@ -137,6 +147,15 @@ exports.deleteUser = (userId) => {
   ], (err, result) => {
     if (err) return console.warn("Failed to delete user #" + userId + ":", err);
     console.log("Deleted user #" + userId);
+  });
+};
+
+exports.setRoomState = (roomId, state, fn=null) => {
+  db.query(`UPDATE rooms SET state = ? WHERE id = ?;`, 
+  [state, roomId],(err, result) => {
+    if (err) return console.warn("Failed to set state for room #" + roomId + ":", err);
+    console.debug("Set state for room #" + roomId + " to '" + state + "'");
+    if (fn) fn({});
   });
 };
 
@@ -314,10 +333,11 @@ exports.getWhiteCards = (roomId, userId, count, fn) => {
 
     results.forEach(result => {
       cardsSql.push(`(${result.id}, ${roomId}, ${userId})`);
-      cards[result.id] = {id: result.id, text: result.text};
+      if (count > 1) cards[result.id] = {id: result.id, text: result.text};
     });
 
-    fn(cards);
+    if (count == 1) fn({id: results[0].id, text: results[0].text });
+    else fn(cards);
 
     // Prevent the chosen cards from being reused
     var sql = `INSERT INTO room_white_cards (card_id, room_id, user_id) VALUES `;

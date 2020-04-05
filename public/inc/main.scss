@@ -198,14 +198,48 @@ input[type=text] {
 	top: 0;
 	overflow: hidden;
 
+	#central-action {
+		position: relative;
+		background-color: white;
+		border: 1px solid $outlineColor;
+		padding: 10px 15px;
+		cursor: pointer;
+		margin: 4px auto;
+		width: 150px;
+		text-align: center;
+		top: calc(90% - #{$cardHeight * $cardScale} - 22px);
+		transition: $resizeTransition;
+		font-weight: 700;
+
+		@media only screen and (max-width: $firstTransitionWidth) {
+			top: calc(100% - #{$cardHeight * $cardScale} - 75px);
+			transition: $resizeTransition;
+		}
+
+		@media only screen and (max-width: $handWidth) {
+			top: calc(100% - #{$cardHeight * $cardScale} - 85px);
+		}
+
+		&:hover {
+			margin: 0 auto;
+			border: 4px solid $contrastColor;
+			font-size: 1.02em;
+		}
+	}
+
 	#cur-black-card {
 		position: absolute;
 		left: calc(50% - #{$cardWidth * $cardScale / 2});
-		top: calc(40% - #{$cardHeight * $cardScale / 2 + 10px});
+		top: calc(35% - #{$cardHeight * $cardScale / 2 + 10px});
 		transform: scale(1.5);
+		transition: $resizeTransition;
 
 		@media only screen and (max-width: $firstTransitionWidth) {
-			top: calc(50% - #{$cardHeight * $cardScale + 10px});
+			top: calc(45% - #{$cardHeight * $cardScale + 10px});
+		}
+
+		@media only screen and (max-height: 650px) {
+			transform: scale(1.25);
 		}
 	}
 
@@ -293,7 +327,7 @@ input[type=text] {
 		@media only screen and (max-width: $firstTransitionWidth) {
 			top: 0;
 			border-top: 0;
-			height: calc(100% - #{$cardHeight * $cardScale} - 33px);
+			height: calc(100% - #{$cardHeight * $cardScale} - 39px);
 			width: 20%;
 		}
 

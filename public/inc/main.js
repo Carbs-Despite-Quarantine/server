@@ -1,3 +1,20 @@
+/*******************
+ * State Constants *
+ *******************/
+
+const UserStates = Object.freeze({
+  "idle": 1,
+  "choosing": 2,
+  "czar": 3,
+  "inactive": 4
+});
+
+const RoomStates = Object.freeze({
+  "new": 1,
+  "choosingCards": 2,
+  "readingCards": 3
+});
+
 /********************
  * Global Variables *
  ********************/
@@ -193,6 +210,14 @@ function populateChat(messages) {
   }
 }
 
+/*************
+ * User List *
+ *************/
+
+function getStateString(state) {
+  return state == UserStates.czar ? "Card Czar" : (state == UserStates.idle ? "Ready" : "Choosing...");
+}
+
 function addUser(user) {
   $("#user-list").append(`
     <div class="icon-container user-display" id="user-${user.id}">
@@ -201,10 +226,10 @@ function addUser(user) {
       </div>
       <div class="content user-info">
         <h2>${user.name}</h2>
-        <p>${room.curCzar == user.id ? "Card Czar" : "Ready"}</p>
+        <p id="user-state-${user.id}">${getStateString(user.state)}</p>
       </div>
-      <div class="user-score" id="user-score-${user.id}">
-        <h2>${user.score}</h2>
+      <div class="user-score">
+        <h2 id="user-score-${user.id}">${user.score}</h2>
       </div>
     </div>
   `);
@@ -214,6 +239,15 @@ function populateUserList(users) {
   for (var user in users) {
     if (users[user].icon && users[user].name) addUser(users[user]);
   }
+}
+
+function setUserState(userId, state) {
+  users[userId].state = state;
+  $("#user-state-" + userId).text(getStateString(state));
+}
+
+function setUserScore(userId, score) {
+  $("#user-score-" + userId).text(score);
 }
 
 /**********************
@@ -369,9 +403,11 @@ socket.on("init", data => {
 
   users[userId] = {
     id: userId,
-    name: "Guest",
+    name: null,
+    icon: null,
     roomId: roomId,
-    score: 0
+    score: 0,
+    state: UserStates.idle
   };
 
   if (roomId) {
@@ -478,6 +514,8 @@ $("#set-username").submit(event => {
 
       user.name = userName;
       if (response.message) addMessage(response.message);
+
+      users[userId].state = UserStates.choosing;
       addUser(users[userId]);
     });
   } else {
@@ -493,6 +531,8 @@ $("#set-username").submit(event => {
 
       room = response.room;
       user.name = userName;
+      user.roomId = room.id;
+      user.state = UserStates.czar;
 
       // Clear and cache the edition menu in order to re-populate it
       var editionMenu = $("#select-edition");
@@ -620,13 +660,35 @@ socket.on("likeMessage", data => {
 
 socket.on("unlikeMessage", data => {
   if (data.msgId && data.userId) removeLike(data.msgId, data.userId);
-})
+});
+
+/********
+ * Game *
+ ********/
+
+// TODO: display aand allow czar to pick
+socket.on("cardChoices", data => {
+  console.debug("Card choices:", data);
+});
+
+socket.on("userState", data => {
+  setUserState(data.userId, data.state);
+});
+
+socket.on("answersReady", () => {
+  if (users[userId].state != UserStates.czar) return console.warn("Recieved answersReady state despite not being czar!");
+  $("#central-action").show().text("Read Answers");
+});
 
 /********************
  * Card Interaction *
  ********************/
 
+// The ID of the currently selected white card
 var selectedCard = null;
+
+// Set to true while waiting for a server response from selectCard
+var submittingCard = false;
 
 function appendCard(card, target, isWhite=true) {
   var color = isWhite ? "white" : "black";
@@ -645,16 +707,18 @@ function appendCard(card, target, isWhite=true) {
   target.append(html + `<div class="card-text">${card.text}</div></div`);
 }
 
-// TODO: animate
+// TODO: animate?
 function addCardToDeck(card) {
   appendCard(card, $("#hand"));
   var cardElement = $("#white-card-" + card.id);
   cardElement.click(event => {
+    if (users[userId].state != UserStates.choosing || submittingCard) return;
     if (selectedCard) {
       $("#white-card-" + selectedCard).removeClass("selected-card");
     }
     cardElement.addClass("selected-card");
     selectedCard = card.id;
+    $("#central-action").show().text("Submit Card");
   });
 }
 
@@ -671,4 +735,44 @@ function setBlackCard(blackCard) {
 
 $("#hand").sortable({
   tolerance: "pointer"
+});
+
+$("#game-wrapper").click(event => {
+  if (!submittingCard && selectedCard && ($(event.target).is("#game-wrapper") || $(event.target).is("#hand"))) {
+    $("#white-card-" + selectedCard).removeClass("selected-card");
+    selectedCard = null;
+    $("#central-action").hide();
+  }
+})
+
+function submitCard() {
+  $("#central-action").hide();
+  if (selectedCard && !submittingCard) {
+    submittingCard = true;
+    var cardId = selectedCard;
+    socket.emit("submitCard", {
+      cardId: cardId
+    }, response => {
+      submittingCard = false;
+      if (response.error) {
+        console.warn("Failed to submit card #" + selectedCard + ":", response.error);
+        return $("#central-action").show().text("Submit Card");
+      }
+      selectedCard = null;
+      $("#white-card-" + cardId).remove();
+
+      if (response.newCard) addCardToDeck(response.newCard);
+      setUserState(userId, UserStates.idle);
+    })
+  }
+}
+
+$("#central-action").click(event => {
+  var curState = users[userId].state;
+
+  if (curState == UserStates.czar) {
+    console.debug("do it !");
+  } else if (curState == UserStates.choosing) {
+    submitCard();
+  }
 });
