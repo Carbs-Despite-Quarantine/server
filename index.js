@@ -127,8 +127,9 @@ function initSocket(socket, userId) {
 
     var token = helpers.makeHash(8);
 
-    db.query(`INSERT INTO rooms (token) VALUES (?);`, [
-      token
+    db.query(`INSERT INTO rooms (token, cur_czar) VALUES (?, ?);`, [
+      token,
+      userId
     ], (err, result) => {
       if (err) {
         console.warn("Failed to create room:", err);
@@ -141,6 +142,7 @@ function initSocket(socket, userId) {
         var room = {
           id: roomId,
           token: token,
+          curCzar: userId,
           users: [userId],
           messages: {}
         };
@@ -213,7 +215,8 @@ function initSocket(socket, userId) {
           id: userId,
           icon: user.icon,
           name: user.name,
-          roomId: room.id
+          roomId: room.id,
+          score: user.score
         };
         roomUserIds.push(userId);
 
@@ -293,7 +296,8 @@ function initSocket(socket, userId) {
                   id: userId,
                   name: user.name,
                   icon: user.icon,
-                  roomId: user.roomId
+                  roomId: user.roomId,
+                  score: user.score
                 },
                 message: message
               });
@@ -306,7 +310,10 @@ function initSocket(socket, userId) {
 
   socket.on("userLeft", (data) => {
     var user = getUser(userId, true);
-    if (user.error) return;
+    if (user.error) {
+      // Delete the user if they weren't in a room
+      return db.deleteUser(userId);
+    }
 
     var activeUsers = 0;
 
@@ -325,6 +332,7 @@ function initSocket(socket, userId) {
         });
 
         if (activeUsers == 0) db.deleteRoom(user.roomId);
+        else db.deleteUser(userId);
 
         // If we aren't returning here, we still need the roomId for createMessage()
         user.roomId = null;
@@ -570,6 +578,7 @@ io.on("connection", (socket) => {
       name: null,
       icon: null,
       roomId: null,
+      score: 0,
       socket: socket
     };
 

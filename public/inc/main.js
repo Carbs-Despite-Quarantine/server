@@ -42,7 +42,7 @@ function scrollMessages() {
 }
 
 function likeMessage(message) {
-  if (message.likes.hasOwnProperty(userId)) return console.warn("Can't like a message twice!");
+  if (message.likes.includes(userId)) return console.warn("Can't like a message twice!");
   socket.emit("likeMessage", {
     msgId: message.id
   }, response => {
@@ -160,11 +160,11 @@ function removeLike(msgId, userId) {
 
 function addMessage(message, addToRoom=true) {
   $("#chat-history").append(`
-    <div class="msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}" id="msg-${message.id}">
-      <div class="msg-icon">
+    <div class="icon-container msg-container ${message.isSystemMsg ? "system-msg" : "user-msg"}" id="msg-${message.id}">
+      <div class="icon msg-icon">
         <i class="fas fa-${users[message.userId].icon}"></i>
       </div>
-      <div class="msg-content">
+      <div class="content msg-content">
         <h2>${users[message.userId].name}</h2>
         <p>${message.content}</p>
       </div>
@@ -190,6 +190,29 @@ function addMessage(message, addToRoom=true) {
 function populateChat(messages) {
   for (var msgId in messages) {
     addMessage(messages[msgId], false);
+  }
+}
+
+function addUser(user) {
+  $("#user-list").append(`
+    <div class="icon-container user-display" id="user-${user.id}">
+      <div class="icon user-icon">
+        <i class="fas fa-${user.icon}"></i>
+      </div>
+      <div class="content user-info">
+        <h2>${user.name}</h2>
+        <p>${room.curCzar == user.id ? "Card Czar" : "Ready"}</p>
+      </div>
+      <div class="user-score" id="user-score-${user.id}">
+        <h2>${user.score}</h2>
+      </div>
+    </div>
+  `);
+}
+
+function populateUserList(users) {
+  for (var user in users) {
+    if (users[user].icon && users[user].name) addUser(users[user]);
   }
 }
 
@@ -347,7 +370,8 @@ socket.on("init", data => {
   users[userId] = {
     id: userId,
     name: "Guest",
-    roomId: roomId
+    roomId: roomId,
+    score: 0
   };
 
   if (roomId) {
@@ -372,7 +396,9 @@ socket.on("init", data => {
       users = response.users;
       room = response.room;
       room.link = window.location.href;
+
       populateChat(room.messages);
+      populateUserList(users);
 
       $("#setup-spinner").hide();
     });
@@ -385,6 +411,7 @@ socket.on("init", data => {
 socket.on("userJoined", data => {
   users[data.user.id] = data.user;
   if (data.message) addMessage(data.message);
+  addUser(data.user);
 });
 
 socket.on("userLeft", data => {
@@ -392,6 +419,7 @@ socket.on("userLeft", data => {
     return console.error("Recieved leave message for unknown user #" + data.userId);
   }
   if (data.message) addMessage(data.message);
+  $("#user-" + data.userId).remove();
   users[data.userId].roomId = null;
 })
 
@@ -447,6 +475,7 @@ $("#set-username").submit(event => {
 
       user.name = userName;
       if (response.message) addMessage(response.message);
+      addUser(users[userId]);
     });
   } else {
     console.debug("Creating room...");
@@ -484,6 +513,7 @@ $("#set-username").submit(event => {
       window.history.pushState(null, null, room.link);
 
       populateChat(room.messages);
+      populateUserList(users);
 
       $("#setup-spinner").hide();
     });
@@ -593,29 +623,6 @@ socket.on("unlikeMessage", data => {
  * Card Interaction *
  ********************/
 
-const cardDragHandler = {
-  scroll: false,
-  containment: "#game-wrapper",
-  start: (event, ui) => {
-    ui.helper.data("addedToStorage", false);
-  },
-  drag: (event, ui) => {
-    $(event.target).css("z-index", 99);
-  },
-  stop: (event, ui) => {
-    $(event.target).css("z-index", "");
-    // Move the card out of the hand
-    if (!ui.helper.data("addedToStorage")) {
-      if (!$(event.target).parent().is($("#game-wrapper"))) {
-        var parentOffset = $(event.target).parent().offset();
-        var element = $(event.target).detach();
-        element.attr("style", `position: absolute; left: ${ui.offset.left}px; top: ${ui.offset.top}px`);
-        $("#game-wrapper").append(element);
-      }
-    }
-  }
-};
-
 function appendCard(card, target) {
   var id = (card.draw ? "black" : "white") + "-card-" + card.id;
   var html = `<div class="card ${card.draw ? "black" : "white"} front" id="${id}">`;
@@ -630,7 +637,6 @@ function appendCard(card, target) {
     }
   }
   target.append(html + `<div class="card-text">${card.text}</div></div`);
-  $("#" + id).draggable(cardDragHandler);
 }
 
 // TODO: animate
@@ -641,30 +647,6 @@ function addCardsToDeck(newCards) {
   }
 }
 
-$(".card").draggable(cardDragHandler);
-
-
-$(".card-storage").droppable({
-  drop: (event, ui) => {
-    // Move the card into storage
-    ui.helper.data("addedToStorage", true);
-    var element = ui.draggable.detach();
-
-    var position = "relative";
-    if ($(event.target).is("#deck")) position = "absolute";
-
-    element.attr("style", `position: ${position};`);
-    $(event.target).append(element);
-  }
-});
-
-$("#black-deck").click(event => {
-  if ($("#cur-black-card").empty()) {
-    appendCard({
-      id: 1,
-      text: "Make a haiku",
-      pick: 3,
-      draw: 2
-    }, $("#cur-black-card"));
-  }
+$("#hand").sortable({
+  tolerance: "pointer"
 });

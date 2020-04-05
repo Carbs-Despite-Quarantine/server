@@ -1,7 +1,7 @@
 USE `cah-online`;
 
 DROP TABLE IF EXISTS room_white_cards, room_black_cards;
-DROP TABLE IF EXISTS message_likes, messages, room_users, black_cards_link, white_cards_link;
+DROP TABLE IF EXISTS message_likes, messages, room_users, room_packs, black_cards_link, white_cards_link;
 DROP TABLE IF EXISTS rooms, users, black_cards, white_cards, editions, packs;
 
 CREATE table editions (
@@ -49,6 +49,7 @@ CREATE TABLE rooms (
 	token VARCHAR(8) NOT NULL,
 	edition VARCHAR(8),
 	rotate_czar BOOLEAN DEFAULT FALSE,
+	cur_czar INT NOT NULL,
 	PRIMARY KEY (id)
 );
 
@@ -57,6 +58,7 @@ CREATE TABLE users (
 	room_id INT,
 	name VARCHAR(16),
 	icon VARCHAR(16),
+	score INT NOT NULL DEFAULT 0,
 	PRIMARY KEY (id),
 	FOREIGN KEY (room_id)
 		REFERENCES rooms (id)

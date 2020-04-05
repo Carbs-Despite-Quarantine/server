@@ -4,6 +4,7 @@ $cardScale: 0.5;
 $cardWidth: 270px;
 $cardHeight: 378px;
 $cardSpacing: 2px;
+$iconSize: 2.2em;
 
 $handWidth: 7 * ($cardWidth * $cardScale + 2 * $cardSpacing);
 $minHandMargin: 400px;
@@ -75,23 +76,21 @@ input[type=text] {
 	top: 0;
 	overflow: hidden;
 
-	#chat-container {
+	.text-container {
 		background-color: white;
 		position: absolute;
-		width: 13%;
-		height: calc(80% - #{$cardHeight * $cardScale});
-		right: 10%;
-		top: 10%;
 		border: solid 1px $outlineColor;
 		transition: $resizeTransition;
 		z-index: 5;
 		padding: 10px;
+		width: 13%;
+		height: calc(80% - #{$cardHeight * $cardScale});
+		right: 10%;
+		top: 10%;
 
 		@media only screen and (max-width: $firstTransitionWidth) {
-			right: 0;
 			top: 0;
 			border-top: 0;
-			border-right: 0;
 			height: calc(100% - #{$cardHeight * $cardScale} - 33px);
 			width: 20%;
 		}
@@ -101,99 +100,20 @@ input[type=text] {
 			width: 25%;
 		}
 
-		#chat-header {
-			h1 {
-				display: inline;
-				font-size: 1.3em;
-				margin: 3px 0;
-			}
-
-			#room-link {
-				float: right;
-				display: block;
-				margin: 2px 2px;
-				color: black;
-				font-size: 20px;
-				cursor: pointer;
-
-				&:hover {
-					color: $systemMsgColor;
-					margin: 1px 1px;
-					font-size: 22px;
-				}
-
-				&:active {
-					margin: 0px 0px;
-					font-size: 24px;
-				}
-			}
-
-			#link-copy-notification {
-				position: absolute;
-				top: -45px;
-				right: -10px;
-				background-color: white;
-				padding: 10px 15px;
-				border-radius: 10px;
-				font-weight: 700;
-				border: 2px solid $outlineColor;
-				z-index: 10;
-
-				&.visible {
-					transition: opacity 2s ease-out;
-				}
-
-				&:before,
-				&:after {
-				    content: "";
-				    position:absolute;
-				    bottom: -10px;
-				    right: 20px;
-				    z-index:12;
-				    width: 0;
-				    height: 0;
-				    border: solid 10px transparent;
-				    border-bottom: 0;
-				    border-top-color: white;
-				}
-				&:before {
-				    bottom:-12px;
-				    z-index:11;
-				    border-top-color: $outlineColor;
-				}
-
-				@media only screen and (max-width: $firstTransitionWidth) {
-					top: 5px;
-					right: 45px;
-					padding: 7px;
-					border-radius: 0;
-
-					&:before,
-					&:after {
-							top: 8px;
-							right: -6px;
-					    bottom: auto;
-					    border: solid 8px transparent;
-					    border-right: 0;
-					    border-left-color: white;
-					}
-
-					&:before {
-						right: -10px;
-				    border-left-color: $outlineColor;
-					}
-				}
-			}
+		h1 {
+			font-size: 1.3em;
+			margin: 3px 0;
+			display: inline;
 		}
 
-		#chat-history {
+		.icon-list {
 			display: flex;
 			flex-direction: column;
 			position: absolute;
-			overflow-y: scroll;
+			overflow-y: auto;
 			overflow-x: hidden;
 			top: 30px;
-			bottom: 30px;
+			bottom: 0;
 			left: 0;
 			right: 10px;
 			margin: 15px 0;
@@ -215,11 +135,7 @@ input[type=text] {
 			  background-color: $outlineColor;
 			}
 
-			> :first-child {
-			  margin-top: auto !important;
-			}
-
-			.msg-container {
+			.icon-container {
 				margin: 1px 0;
 				padding: 8px 10px;
 				width: calc(100% - 23px);
@@ -231,16 +147,8 @@ input[type=text] {
 					transition: 0.1s ease;
 				}
 
-				&.system-msg .msg-content {
-					h2, p {
-						font-style: italic;
-						color: $systemMsgColor;
-					}
-				}
 
-				$iconSize: 2.2em;
-
-				.msg-icon {
+				.icon {
 					width: $iconSize;
 					height: $iconSize;
 					background-color: $iconBackground;
@@ -254,10 +162,11 @@ input[type=text] {
 					}
 				}
 
-				.msg-content {
+				.content {
 					width: calc(100% - #{$iconSize});
 					margin: 0 5px;
 					margin-right: 0px;
+					@include wrap-words;
 
 					h2 {
 						font-size: 1em;
@@ -266,43 +175,6 @@ input[type=text] {
 
 					p {
 						margin: 0;
-						@include wrap-words;
-					}
-
-					.msg-likes {
-						margin: 2px 2px;
-						margin-bottom: 0;
-						display: inline-flex;
-						width: auto;
-						background-color: $iconBackground;
-						border-radius: 20px;
-						padding: 2px;
-
-						div {
-							margin: 2px;
-							width: 1em;
-							height: 1em;
-							display: flex;
-							justify-content: center;
-							align-items: center;
-
-							&.msg-heart {
-								cursor: pointer;
-								
-								.fas {
-									color: red;
-								}
-
-								.far {
-									transition: 0.2s ease;
-
-									&:hover {
-										color: #fa8282;
-										transition: 0.2s ease;
-									}
-								}
-							}
-						}
 					}
 				}
 
@@ -318,104 +190,240 @@ input[type=text] {
 			}
 		}
 
-		input[type=text] {
-			width: calc(100% - 20px);
-			font-size: 16px;
-			position: absolute;
-			bottom: 15px;
-		}
-	}
-
-	.card-storage {
-		background-color: white;
-		width: $cardWidth * $cardScale;
-		height: $cardHeight * $cardScale;
-		position: absolute;
-		padding: 10px 0;
-		border: solid 1px $outlineColor;
-
-		&.ui-droppable-hover {
-			border-color: black;
-		}
-
-		&#hand { 
-			width: 80%;
-			bottom: 0;
+		&#game-info-container {
 			left: 10%;
-			right: 10%;
-			padding-bottom: 2px;
-			display: flex;
-			flex-direction: row;
-			justify-content: center;
-			border-bottom: none;
-			transition: $resizeTransition;
 
 			@media only screen and (max-width: $firstTransitionWidth) {
-				width: 100%;
 				left: 0;
-				right: 0;
 				border-left: 0;
+			}
+
+			#user-list {
+				.user-display {
+					.user-info {
+						width: calc(100% - #{$iconSize} - 32px);
+					}
+
+					.user-score {
+						display: flex;
+						justify-content: flex-end;
+						align-items: center;
+						width: 32px;
+
+						h2 {
+							margin: 0;
+							padding: 0;
+						}
+					}
+				}
+			}
+		}
+
+		&#chat-container {
+			right: 10%;
+
+			@media only screen and (max-width: $firstTransitionWidth) {
+				right: 0;
 				border-right: 0;
 			}
 
-			@media only screen and (max-width: $handWidth) {
-				overflow-y: hidden;
-				overflow-x: scroll;
-				padding-bottom: 20px;
-				justify-content: flex-start;
+			#chat-header {
 
-				scrollbar-color: $contrastColor transparent;
+				#room-link {
+					float: right;
+					display: block;
+					margin: 2px 2px;
+					color: black;
+					font-size: 20px;
+					cursor: pointer;
 
-				&::-webkit-scrollbar {
-				  height: 15px;
+					&:hover {
+						color: $systemMsgColor;
+						margin: 1px 1px;
+						font-size: 22px;
+					}
+
+					&:active {
+						margin: 0px 0px;
+						font-size: 24px;
+					}
 				}
 
-				&::-webkit-scrollbar-thumb {
-				  border-radius: 25px;
-				  background-color: $contrastColor;
-				}
+				#link-copy-notification {
+					position: absolute;
+					top: -45px;
+					right: -10px;
+					background-color: white;
+					padding: 10px 15px;
+					border-radius: 10px;
+					font-weight: 700;
+					border: 2px solid $outlineColor;
+					z-index: 10;
 
-				&::-webkit-scrollbar-track {
-				  border-radius: 25px;
-				  background-color: transparent;
+					&.visible {
+						transition: opacity 2s ease-out;
+					}
+
+					&:before,
+					&:after {
+					    content: "";
+					    position:absolute;
+					    bottom: -10px;
+					    right: 20px;
+					    z-index:12;
+					    width: 0;
+					    height: 0;
+					    border: solid 10px transparent;
+					    border-bottom: 0;
+					    border-top-color: white;
+					}
+					&:before {
+					    bottom:-12px;
+					    z-index:11;
+					    border-top-color: $outlineColor;
+					}
+
+					@media only screen and (max-width: $firstTransitionWidth) {
+						top: 5px;
+						right: 45px;
+						padding: 7px;
+						border-radius: 0;
+
+						&:before,
+						&:after {
+								top: 8px;
+								right: -6px;
+						    bottom: auto;
+						    border: solid 8px transparent;
+						    border-right: 0;
+						    border-left-color: white;
+						}
+
+						&:before {
+							right: -10px;
+					    border-left-color: $outlineColor;
+						}
+					}
 				}
 			}
 
-			.card {
-				flex: 0 0 auto;
-				margin: 0 $cardSpacing;
+			#chat-history {
+				bottom: 30px;
+
+				> :first-child {
+				  margin-top: auto !important;
+				}
+
+				.msg-container {
+					&.system-msg .msg-content {
+						h2, p {
+							font-style: italic;
+							color: $systemMsgColor;
+						}
+					}
+
+					.msg-content {
+						.msg-likes {
+							margin: 2px 2px;
+							margin-bottom: 0;
+							display: inline-flex;
+							width: auto;
+							background-color: $iconBackground;
+							border-radius: 20px;
+							padding: 2px;
+
+							div {
+								margin: 2px;
+								width: 1em;
+								height: 1em;
+								display: flex;
+								justify-content: center;
+								align-items: center;
+
+								&.msg-heart {
+									cursor: pointer;
+									
+									.fas {
+										color: red;
+									}
+
+									.far {
+										transition: 0.2s ease;
+
+										&:hover {
+											color: #fa8282;
+											transition: 0.2s ease;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			input[type=text] {
+				width: calc(100% - 20px);
+				font-size: 16px;
+				position: absolute;
+				bottom: 15px;
+			}
+		}
+	}
+
+	// TODO: remove draggable
+
+	#hand {
+		background-color: white;
+		position: absolute;
+		border: solid 1px $outlineColor;
+		width: 80%;
+		height: $cardHeight * $cardScale;
+		bottom: 0;
+		left: 10%;
+		right: 10%;
+		padding: 10px 0;
+		padding-bottom: 2px;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		border-bottom: none;
+		transition: $resizeTransition;
+
+		@media only screen and (max-width: $firstTransitionWidth) {
+			width: 100%;
+			left: 0;
+			right: 0;
+			border-left: 0;
+			border-right: 0;
+		}
+
+		@media only screen and (max-width: $handWidth) {
+			overflow-y: hidden;
+			overflow-x: scroll;
+			padding-bottom: 20px;
+			justify-content: flex-start;
+
+			scrollbar-color: $contrastColor transparent;
+
+			&::-webkit-scrollbar {
+			  height: 15px;
+			}
+
+			&::-webkit-scrollbar-thumb {
+			  border-radius: 25px;
+			  background-color: $contrastColor;
+			}
+
+			&::-webkit-scrollbar-track {
+			  border-radius: 25px;
+			  background-color: transparent;
 			}
 		}
 
-		&.card-stack {
-			padding: 10px;
-			transition: $resizeTransition;
-			top: 10%;
-
-			@media only screen and (max-width: $firstTransitionWidth) {
-				top: 20px;
-				transition: $resizeTransition;
-			}
-
-			.card {
-				position: absolute;
-			}
-
-			&#deck {
-				left: 10%;
-
-				@media only screen and (max-width: $firstTransitionWidth) {
-					left: 20px;
-				}
-			}
-
-			&#cur-black-card {
-				left: calc(10% + 40px + #{$cardWidth * $cardScale});
-
-				@media only screen and (max-width: $firstTransitionWidth) {
-					left: 60px + $cardWidth * $cardScale;
-				}
-			}
+		.card {
+			flex: 0 0 auto;
+			margin: 0 $cardSpacing;
 		}
 	}
 }

@@ -49,7 +49,7 @@ exports.setUserName = (userId, name) => {
 exports.getRoom = (roomId, fn) => {
   if (!roomId) return fn({error: "Room ID is required"});
   var sql = `
-    SELECT token, edition, rotate_czar as rotateCzar
+    SELECT token, edition, rotate_czar as rotateCzar, cur_czar as curCzar
     FROM rooms
     WHERE id = ?;
   `;
@@ -66,7 +66,8 @@ exports.getRoom = (roomId, fn) => {
       id: roomId,
       token: results[0].token,
       edition: results[0].edition,
-      rotateCzar: results[0].rotateCzar
+      rotateCzar: results[0].rotateCzar,
+      curCzar: results[0].curCzar
     });
   });
 };
@@ -95,7 +96,7 @@ exports.addUserToRoom = (userId, roomId, fn=null) => {
 };
 
 exports.getRoomUsers = (roomId, fn) => {
-  db.query(`SELECT id, name, icon FROM users WHERE room_id = ?;`, [
+  db.query(`SELECT id, name, icon, score FROM users WHERE room_id = ?;`, [
     roomId
   ],(err, results, fields) => {
     if (err) {
@@ -112,7 +113,8 @@ exports.getRoomUsers = (roomId, fn) => {
       roomUsers[row.id] = {
         id: row.id,
         name: row.name,
-        icon: row.icon
+        icon: row.icon,
+        score: row.score
       };
     });
     fn({users: roomUsers, userIds: roomUserIds});
@@ -125,6 +127,15 @@ exports.deleteRoom = (roomId) => {
   ], (err, result) => {
     if (err) return console.warn("Failed to delete room #" + roomId + ":", err);
     console.log("Deleted room #" + roomId);
+  });
+};
+
+exports.deleteUser = (userId) => {
+  db.query(`DELETE FROM users WHERE id = ?;`, [
+    userId
+  ], (err, result) => {
+    if (err) return console.warn("Failed to delete user #" + userId + ":", err);
+    console.log("Deleted user #" + userId);
   });
 };
 

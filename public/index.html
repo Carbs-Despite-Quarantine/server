@@ -24,23 +24,22 @@
 </head>
 <body>
 	<div id="game-wrapper">
-		<div class="card-storage card-stack" id="deck">
-			<div class="card black back" id="black-deck">
-				<div class="card-text">Cards Against Quarantine</div>
+		<div id="hand"></div>
+		<div class="text-container" id="game-info-container">
+			<div id="game-info-header">
+				<h1>Players</h1>
 			</div>
+			<div id="user-list" class="icon-list"></div>
 		</div>
-		<div class="card-storage card-stack" id="cur-black-card">
-		</div>
-		<div class="card-storage" id="hand"></div>
-		<div id="chat-container">
+		<div class="text-container" id="chat-container">
 			<div id="chat-header">
-				<h1>Chatroom</h1>
+				<h1>Chat</h1>
 				<a id="room-link" title="Copy Room Link">
 					<i class="fas fa-link"></i>
 				</a>
 				<div id="link-copy-notification" style="display: none;">Link Copied!</div>
 			</div>
-			<div id="chat-history"></div>
+			<div id="chat-history" class="icon-list"></div>
 			<input type="text" id="chat-input" placeholder="Type a message" maxlength="256" />
 		</div>
 	</div>
