@@ -198,7 +198,7 @@ input[type=text] {
 	top: 0;
 	overflow: hidden;
 
-	#central-action {
+	.action-button {
 		position: relative;
 		background-color: white;
 		border: 1px solid $outlineColor;
@@ -207,23 +207,107 @@ input[type=text] {
 		margin: 4px auto;
 		width: 150px;
 		text-align: center;
-		top: calc(90% - #{$cardHeight * $cardScale} - 22px);
 		transition: $resizeTransition;
 		font-weight: 700;
-
-		@media only screen and (max-width: $firstTransitionWidth) {
-			top: calc(100% - #{$cardHeight * $cardScale} - 75px);
-			transition: $resizeTransition;
-		}
-
-		@media only screen and (max-width: $handWidth) {
-			top: calc(100% - #{$cardHeight * $cardScale} - 85px);
-		}
 
 		&:hover {
 			margin: 0 auto;
 			border: 4px solid $contrastColor;
 			font-size: 1.02em;
+		}
+
+		&#select-winner {
+			top: calc(90% - #{$cardHeight * $cardScale});
+
+			@media only screen and (max-height: 880px) {
+				top: calc(90% - #{$cardHeight * $cardScale} + 7px);
+			}
+
+			@media only screen and (max-width: 1450px) and (min-width: $firstTransitionWidth) {
+				margin: 4px;
+				left: 26.5%;
+				top: calc(90% - #{$cardHeight * $cardScale} - 80px);
+
+				@media only screen and (min-height: 750px) {
+					top: calc(90% - #{$cardHeight * $cardScale} - 100px);
+				}
+
+				@media only screen and (max-height: 720px) {
+					top: calc(90% - #{$cardHeight * $cardScale} - 35px);
+				}
+
+				@media only screen and (min-height: 850px) {
+					top: calc(90% - #{$cardHeight * $cardScale} - 140px);
+				}
+
+				&:hover {
+					margin: 0;
+				}
+			}
+			
+			@media only screen and (max-width: $firstTransitionWidth) {
+			}
+		}
+
+		&#central-action {
+			top: calc(90% - #{$cardHeight * $cardScale} - 22px);
+
+			@media only screen and (max-width: $firstTransitionWidth) {
+				top: calc(100% - #{$cardHeight * $cardScale} - 75px);
+				transition: $resizeTransition;
+			}
+
+			@media only screen and (max-width: $handWidth) {
+				top: calc(100% - #{$cardHeight * $cardScale} - 85px);
+			}
+		}
+	}
+
+	#response-cards {
+		position: absolute;
+		display: flex;
+		left: 50%;
+		transform: translateX(-50%);
+		top: calc(35% - #{$cardHeight * $cardScale / 2 - 180px});
+		transition: $resizeTransition;
+		justify-content: center;
+		width: 100%;
+		align-items: center;
+
+		.card {
+			margin: 10px;
+			transition: $resizeTransition;
+		}
+
+		@media only screen and (max-height: 850px) {
+			top: calc(35% - #{$cardHeight * $cardScale / 2 - 150px});
+		}
+
+		@media only screen and (max-height: 800px) {
+			top: calc(35% - #{$cardHeight * $cardScale / 2 - 130px});
+		}
+
+		@media only screen and (max-width: 1550px) {
+			.card {
+				margin: 5px;
+			}
+		}
+
+		@media only screen and (max-width: 1450px) {
+			top: calc(35% - #{$cardHeight * $cardScale / 2 + 80px});
+			flex-wrap: wrap;
+			width: $cardWidth * $cardScale * 3 + 40px;
+			height: $cardHeight * $cardScale * 2 + 40px;
+			margin: 0 auto;
+			left: 58%;
+		}
+
+		@media only screen and (max-width: $firstTransitionWidth) {
+			transform: none;
+			left: auto;
+			right: 23%;
+			top: auto;
+			bottom: calc(50% - #{$cardHeight * $cardScale / 2} - 12px);
 		}
 	}
 
@@ -231,8 +315,8 @@ input[type=text] {
 		position: absolute;
 		left: calc(50% - #{$cardWidth * $cardScale / 2});
 		top: calc(35% - #{$cardHeight * $cardScale / 2 + 10px});
-		transform: scale(1.5);
 		transition: $resizeTransition;
+		transform: scale(1.5);
 
 		@media only screen and (max-width: $firstTransitionWidth) {
 			top: calc(45% - #{$cardHeight * $cardScale + 10px});
@@ -240,6 +324,47 @@ input[type=text] {
 
 		@media only screen and (max-height: 650px) {
 			transform: scale(1.25);
+		}
+
+		&.responses-shown {
+			top: calc(35% - #{$cardHeight * $cardScale / 2 + 60px});
+
+			transform: scale(1.25);
+
+			@media only screen and (max-height: 850px) {
+				top: calc(35% - #{$cardHeight * $cardScale / 2 + 80px});
+			}
+
+			@media only screen and (max-height: 800px) {
+				transform: scale(1.15);
+			}
+
+			@media only screen and (max-width: 1450px) {
+				transform: scale(1.25);
+				left: 28.5%;
+				&.czar-mode {
+					top: calc(35% - #{$cardHeight * $cardScale / 2 - 10px});
+				}
+				&:not(.czar-mode) {
+					top: calc(35% - #{$cardHeight * $cardScale / 2 - 37px});
+					background-color: red;
+				}
+			}
+
+			@media only screen and (max-width: $firstTransitionWidth) {
+				transform: scale(1.5);
+				left: 27%;
+				top: calc(35% - #{$cardHeight * $cardScale / 2 - 25px});
+			}
+
+			@media only screen and (max-width: 1230px) {
+				transform: scale(1.25);
+				left: 25.5%;
+			}
+
+			@media only screen and (max-height: 700px) and (max-width: 1450px) {
+				top: calc(35% - #{$cardHeight * $cardScale / 2} + 10px);
+			}
 		}
 	}
 

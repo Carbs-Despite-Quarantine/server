@@ -559,6 +559,11 @@ $("#set-username").submit(event => {
       populateUserList(users);
 
       $("#setup-spinner").hide();
+
+      // TODO: get cards from server
+      for (var i = 0; i < 4; i++) {
+        appendCardBack($("#response-cards"));
+      }
     });
   }
 });
@@ -689,6 +694,14 @@ var selectedCard = null;
 
 // Set to true while waiting for a server response from selectCard
 var submittingCard = false;
+
+function appendCardBack(target, isWhite=true) {
+  target.append(`
+    <div class="card ${isWhite ? "white" : "black"} back">
+        <div class="card-text">Cards Against Quarantine</div>
+      </div>
+  `);
+}
 
 function appendCard(card, target, isWhite=true) {
   var color = isWhite ? "white" : "black";
