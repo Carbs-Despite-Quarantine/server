@@ -400,6 +400,8 @@ socket.on("init", data => {
       populateChat(room.messages);
       populateUserList(users);
 
+      if (room.curPrompt) setBlackCard(room.curPrompt);
+
       $("#setup-spinner").hide();
     });
   } else {
@@ -428,7 +430,8 @@ socket.on("roomSettings", data => {
   room.edition = data.edition;
   room.rotateCzar = data.rotateCzar;
 
-  addCardsToDeck(data.cards);
+  if (data.hand) addCardsToDeck(data.hand);
+  setBlackCard(data.blackCard);
 });
 
 window.addEventListener("beforeunload", (event) => {
@@ -469,7 +472,7 @@ $("#set-username").submit(event => {
       }
 
       console.debug("Entered room #" + user.roomId);
-      addCardsToDeck(response.cards);
+      addCardsToDeck(response.hand);
 
       $("#overlay-container").hide();
 
@@ -551,9 +554,9 @@ $("#start-game").click(event => {
     }
 
     $("#overlay-container").hide();
-    addCardsToDeck(response.cards);
+    addCardsToDeck(response.hand);
+    setBlackCard(response.blackCard);
   });
-
 });
 
 $("#room-link").click(event => {
@@ -623,9 +626,12 @@ socket.on("unlikeMessage", data => {
  * Card Interaction *
  ********************/
 
-function appendCard(card, target) {
-  var id = (card.draw ? "black" : "white") + "-card-" + card.id;
-  var html = `<div class="card ${card.draw ? "black" : "white"} front" id="${id}">`;
+var selectedCard = null;
+
+function appendCard(card, target, isWhite=true) {
+  var color = isWhite ? "white" : "black";
+  var id = color + "-card-" + card.id;
+  var html = `<div class="card ${color} front" id="${id}">`;
   if (card.draw || card.pick) {
     if (card.draw == 2) html += `<div class="special draw"></div>`;
 
@@ -640,11 +646,27 @@ function appendCard(card, target) {
 }
 
 // TODO: animate
+function addCardToDeck(card) {
+  appendCard(card, $("#hand"));
+  var cardElement = $("#white-card-" + card.id);
+  cardElement.click(event => {
+    if (selectedCard) {
+      $("#white-card-" + selectedCard).removeClass("selected-card");
+    }
+    cardElement.addClass("selected-card");
+    selectedCard = card.id;
+  });
+}
+
 function addCardsToDeck(newCards) {
   for (var cardId in newCards) {
-    cards[cardId] = newCards[cardId];
-    appendCard(newCards[cardId], $("#hand"));
+    addCardToDeck(newCards[cardId]);
   }
+}
+
+function setBlackCard(blackCard) {
+  $("#cur-black-card").empty();
+  appendCard(blackCard, $("#cur-black-card"), false);
 }
 
 $("#hand").sortable({

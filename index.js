@@ -27,6 +27,27 @@ const handSize = 7;
  **/
 var users = {}
 
+/*****************
+ * Web Endpoints *
+ *****************/
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
+
+app.get("/inc/*", function(req, res) {
+  res.sendFile(path.join(__dirname, "public/", req.path));
+});
+
+app.get("/status", (req, res) => {
+  res.setHeader("Content-Type", "text/plain");
+  res.end("OK");
+});
+
+/**************************
+ * Data Dependent Helpers *
+ **************************/
+
 // Returns all the icons which are not already taken
 function getAvailableIcons(roomIcons) {
   var availableIcons = [];
@@ -45,22 +66,136 @@ function getUser(userId, requireRoom=false) {
   return users[userId];
 }
 
-/*****************
- * Web Endpoints *
- *****************/
+/********************
+ * Socket Responses *
+ ********************/
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
+function finishSetupRoom(userId, roomId, roomUserInfo, rotateCzar, edition, packs, fn) {
+  db.getBlackCard(roomId, blackCard => {
+    if (blackCard.error) {
+      console.warn("Failed to get starting black card for room #" + roomId + ":", blackCard.error);
+      return fn(blackCard)
+    }
 
-app.get("/inc/*", function(req, res) {
-  res.sendFile(path.join(__dirname, "public/", req.path));
-});
+    console.debug("Setup room #" + roomId + " with edition '" + edition + "'");
 
-app.get("/status", (req, res) => {
-  res.setHeader("Content-Type", "text/plain");
-  res.end("OK");
-});
+    // Get starting white cards
+    db.getWhiteCards(roomId, userId, handSize, hand => {
+      if (hand.error) {
+        console.warn("Failed to get starting hand for room #" + roomId + ":", hand.error);
+        return fn(hand);
+      }
+      fn({hand: hand, blackCard: blackCard});
+    });
+
+    roomUserInfo.userIds.forEach(roomUserId => {
+      if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
+
+      var roomSettings = {
+        edition: edition,
+        packs: packs,
+        rotateCzar: rotateCzar,
+        blackCard: blackCard
+      };
+
+      if (!roomUserInfo.users[roomUserId].name || !roomUserInfo.users[roomUserId].icon) {
+        return users[roomUserId].socket.emit("roomSettings", roomSettings);
+      };
+
+      db.getWhiteCards(roomId, roomUserId, handSize, hand => {
+        if (hand.error) {
+          console.warn("Failed to get starting hand for user #" + roomUserId + ":", hand.error);
+          hand = {};
+        }
+        roomSettings.hand = hand;
+        users[roomUserId].socket.emit("roomSettings", roomSettings);
+      });
+    });
+  });
+}
+
+function finishEnterRoom(user, roomId, roomUserIds, hand, fn) {
+  db.createMessage(user.id, "joined the room", true, message => {
+    fn({message: message, hand: hand});
+
+    roomUserIds.forEach(roomUserId => {
+      if (!users.hasOwnProperty(roomUserId)) return;
+      var socketUser = users[roomUserId];
+
+      // Send the new users info to all other active room users
+      if (roomUserId != user.id && socketUser.roomId == roomId) {
+        socketUser.socket.emit("userJoined", {
+          user: {
+            id: user.id,
+            name: user.name,
+            icon: user.icon,
+            roomId: user.roomId,
+            score: user.score
+          },
+          message: message
+        });
+      }
+    });
+  });
+}
+
+function finishJoinRoom(user, room, fn) {
+  // Do this before getting messages since it doubles as a check for room validity
+  db.getRoomUsers(room.id, response => {
+    if (response.error) {
+      console.warn("Failed to get user ids when joining room #" + room.id);
+      return fn(response);
+    } if (response.userIds == 0) {
+      return fn({error: "Can't join empty or invalid room"});
+    }
+
+    // Cache the user lists so wse can reuse the response variable
+    var roomUsers = response.users;
+    var roomUserIds = response.userIds;
+
+    // Add the client to the user list
+    roomUsers[user.id] = {
+      id: user.id,
+      icon: user.icon,
+      name: user.name,
+      roomId: room.id,
+      score: user.score
+    };
+    roomUserIds.push(user.id);
+
+    db.getLatestMessages(room.id, 15, response => {
+      if (response.error) {
+        console.warn("failed to get latest messages from room #" + room.id + ": " + response.error);
+        room.messages = {};
+      } else {
+        room.messages = response.messages;
+      }
+
+      // Add the user to the room
+      user.roomId = room.id;
+      db.addUserToRoom(user.id, room.id);
+
+      // Make aa list of the icons currently in use
+      var roomIcons = [];
+
+      roomUserIds.forEach(roomUserId => {
+        var roomUser = roomUsers[roomUserId];
+        // If the user is active, add their icon to the list
+        if (roomUserId != user.id && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == room.id && roomUser.icon) {
+          roomIcons.push(roomUser.icon)    
+          // I'm not sure if we still need this on the client but it dosen't hurt
+          roomUsers[roomUserId].roomId = room.id;
+        }
+      });
+
+      fn({
+        room: room,
+        users: roomUsers,
+        iconChoices: getAvailableIcons(roomIcons)
+      });
+    });
+  });
+}
 
 /*******************
  * Socket Handling *
@@ -197,61 +332,15 @@ function initSocket(socket, userId) {
     db.getRoomWithToken(data.roomId, data.token, room => {
       if (room.error) return fn(room);
 
-      // Do this before getting messages since it doubles as a check for room validity
-      db.getRoomUsers(room.id, response => {
-        if (response.error) {
-          console.warn("Failed to get user ids when joining room #" + room.id);
-          return fn(response);
-        } if (response.userIds == 0) {
-          return fn({error: "Can't join empty or invalid room"});
-        }
-
-        // Cache the user lists so wse can reuse the response variable
-        var roomUsers = response.users;
-        var roomUserIds = response.userIds;
-
-        // Add the client to the user list
-        roomUsers[userId] = {
-          id: userId,
-          icon: user.icon,
-          name: user.name,
-          roomId: room.id,
-          score: user.score
-        };
-        roomUserIds.push(userId);
-
-        db.getLatestMessages(room.id, 15, response => {
-          if (response.error) {
-            console.warn("failed to get latest messages from room #" + room.id + ": " + response.error);
-            room.messages = {};
-          } else {
-            room.messages = response.messages;
-          }
-
-          // Add the user to the room
-          user.roomId = room.id;
-          db.addUserToRoom(userId, room.id);
-
-          // Make aa list of the icons currently in use
-          var roomIcons = [];
-
-          roomUserIds.forEach(roomUserId => {
-            var roomUser = roomUsers[roomUserId];
-            // If the user is active, add their icon to the list
-            if (roomUserId != userId && users.hasOwnProperty(roomUserId) && users[roomUserId].roomId == data.roomId && roomUser.icon) {
-              roomIcons.push(roomUser.icon)    
-              // I'm not sure if we still need this on the client but it dosen't hurt
-              roomUsers[roomUserId].roomId = room.id;
-            }
-          });
-
-          fn({
-            room: room,
-            users: roomUsers,
-            iconChoices: getAvailableIcons(roomIcons)
-          });
+      if (room.curPrompt) {
+        db.getBlackCardByID(room.curPrompt, curPrompt => {
+          if (curPrompt.error) {
+            console.warn("Recieved invalid prompt card for room #" + data.roomId + ":", curPrompt.error);
+            room.curPrompt = null;
+          } else room.curPrompt = curPrompt;
+          finishJoinRoom(user, room, fn);
         });
-      });
+      } else finishJoinRoom(user, room, fn);
     });
   });
 
@@ -262,48 +351,36 @@ function initSocket(socket, userId) {
 
     if (!helpers.validateString(data.userName)) return fn({error: "Invalid Username"});
 
-    db.getRoomUsers(data.roomId, response => {
-      if (response.error) {
-        console.warn("Failed to get user list for room #" + data.roomId);
-        return fn({error: "Unexpected error"});
-      } else if (response.userIds.length == 0) {
-        return fn({error: "Invalid Room"});
-      } else if (!response.userIds.includes(userId)) {
-        return fn({error: "Can't enter room that hasn't been joined"});
-      }
+    // We need the room to check if the game has started yet
+    db.getRoom(data.roomId, room => {
+      if (room.error) return fn(room);
 
-      user.name = helpers.stripHTML(data.userName);
-      db.setUserName(userId, user.name);
-
-      db.getWhiteCards(data.roomId, userId, 7, cards => {
-        if (cards.error) {
-          console.log("Room ID: " + data.roomId + " valid? ", helpers.validateUInt(data.roomId));
-          console.warn("Failed to get white cards for new user #" + userId + ":", cards.error);
-          return fn(cards);
+      db.getRoomUsers(data.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get user list for room #" + data.roomId);
+          return fn({error: "Unexpected error"});
+        } else if (response.userIds.length == 0) {
+          return fn({error: "Invalid Room"});
+        } else if (!response.userIds.includes(userId)) {
+          return fn({error: "Can't enter room that hasn't been joined"});
         }
 
-        db.createMessage(userId, "joined the room", true, message => {
-          fn({message: message, cards: cards});
+        user.name = helpers.stripHTML(data.userName);
+        db.setUserName(userId, user.name);
 
-          response.userIds.forEach(roomUserId => {
-            if (!users.hasOwnProperty(roomUserId)) return;
-            var socketUser = users[roomUserId];
-
-            // Send the new users info to all other active room users
-            if (roomUserId != userId && socketUser.roomId == data.roomId) {
-              socketUser.socket.emit("userJoined", {
-                user: {
-                  id: userId,
-                  name: user.name,
-                  icon: user.icon,
-                  roomId: user.roomId,
-                  score: user.score
-                },
-                message: message
-              });
+        if (room.edition) {
+          db.getWhiteCards(data.roomId, userId, 7, cards => {
+            if (cards.error) {
+              console.log("Room ID: " + data.roomId + " valid? ", helpers.validateUInt(data.roomId));
+              console.warn("Failed to get white cards for new user #" + userId + ":", cards.error);
+              return fn(cards);
             }
+
+            finishEnterRoom(user, data.roomId, response.userIds, cards, fn);
           });
-        });
+        } else {
+          finishEnterRoom(user, data.roomId, response.userIds, {}, fn);
+        }
       });
     });
   });
@@ -412,44 +489,14 @@ function initSocket(socket, userId) {
                 if (err) {
                   console.warn("Failed to add packs to room #" + user.roomId + ":", err);
                 }
-                finishRoomSetup(userId, user.roomId, response, rotateCzar, data.edition, validPacks, fn);
+                finishSetupRoom(userId, user.roomId, response, rotateCzar, data.edition, validPacks, fn);
               });
-            } else finishRoomSetup(userId, user.roomId, response, rotateCzar, data.edition, [], fn);
+            } else finishSetupRoom(userId, user.roomId, response, rotateCzar, data.edition, [], fn);
           });
         });
       });
     });
   });
-
-  function finishRoomSetup(userId, roomId, roomUserInfo, rotateCzar, edition, packs, fn) {
-    console.debug("Setup room #" + roomId + " with edition '" + edition + "'");
-    // Get starting white cards
-    db.getWhiteCards(roomId, userId, handSize, cards => {
-      if (cards.error) {
-        console.warn("Failed to get starting cards for room #" + roomId + ":", cards.error);
-        return fn(cards);
-      }
-      fn({cards: cards});
-    });
-
-    roomUserInfo.userIds.forEach(roomUserId => {
-      if (roomUserId == userId || !users.hasOwnProperty(roomUserId)) return;
-      if (!roomUserInfo.users[roomUserId].name || !roomUserInfo.users[roomUserId].icon) return;
-
-      db.getWhiteCards(roomId, roomUserId, handSize, cards => {
-        if (cards.error) {
-          console.warn("Failed to get starting cards for user #" + roomUserId + ":", cards.error);
-          cards = {};
-        }
-        users[roomUserId].socket.emit("roomSettings", {
-          edition: edition,
-          packs: packs,
-          rotateCzar: rotateCzar,
-          cards: cards
-        });
-      });
-    });
-  }
 
   /***************
    * Chat System *

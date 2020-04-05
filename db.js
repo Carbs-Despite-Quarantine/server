@@ -49,7 +49,7 @@ exports.setUserName = (userId, name) => {
 exports.getRoom = (roomId, fn) => {
   if (!roomId) return fn({error: "Room ID is required"});
   var sql = `
-    SELECT token, edition, rotate_czar as rotateCzar, cur_czar as curCzar
+    SELECT token, edition, rotate_czar as rotateCzar, cur_czar as curCzar, cur_prompt as curPrompt
     FROM rooms
     WHERE id = ?;
   `;
@@ -67,7 +67,8 @@ exports.getRoom = (roomId, fn) => {
       token: results[0].token,
       edition: results[0].edition,
       rotateCzar: results[0].rotateCzar,
-      curCzar: results[0].curCzar
+      curCzar: results[0].curCzar,
+      curPrompt: results[0].curPrompt
     });
   });
 };
@@ -214,6 +215,20 @@ exports.createMessage = (userId, content, isSystemMsg, fn) => {
  * Cards *
  *********/
 
+function getCardByID(id, black, fn) {
+  var color = black ? "black" : "white";
+  db.query(`SELECT * FROM ${color}_cards WHERE id = ?`, 
+  [id], (err, results, fields) => {
+    if (err) {
+      console.warn("Failed to get " + color + " card #" + id + ":" + err);
+      return fn({error: "MySQL Error"});
+    } else if (results.length == 0) {
+      return fn({error: "Invalid Card ID"});
+    }
+    return fn(results[0]);
+  });
+}
+
 function getCards(roomId, black, count, fn) {
   if (!helpers.validateUInt(roomId)) return fn({error: "Invalid Room ID"});
   if (!helpers.validateUInt(count)) count = 1;
@@ -266,11 +281,25 @@ exports.getBlackCard = (roomId, fn) => {
     });
 
     db.query(`INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)`, 
-    [
-      results[0].id, 
-      roomId
-    ], (err, results) => {
+    [ results[0].id, roomId ], (err, results) => {
       if (err) return console.warn("Failed to mark black card as used:", err);
+    });
+
+    db.query(`UPDATE rooms SET cur_prompt = ? WHERE id = ?`, 
+    [ results[0].id, roomId ], (err, results) => {
+      if (err) return console.warn("Failed to update prompt for room #" + roomId + ":", err);
+    });
+  });
+};
+
+exports.getBlackCardByID = (id, fn) => {
+  getCardByID(id, true, card => {
+    if (card.error) return fn(card);
+    fn({
+      id: card.id,
+      text: card.text,
+      draw: card.draw,
+      pick: card.pick
     });
   });
 };
@@ -296,4 +325,14 @@ exports.getWhiteCards = (roomId, userId, count, fn) => {
       if (err) return console.warn("Failed to mark white card as used:", err);
     });
   });
-}
+};
+
+exports.getWhiteCardByID = (id, fn) => {
+  getCardByID(id, true, card => {
+    if (card.error) return fn(card);
+    fn({
+      id: card.id,
+      text: card.text
+    });
+  });
+};

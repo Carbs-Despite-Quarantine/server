@@ -67,6 +67,128 @@ input[type=text] {
 	background-color: $contrastColor;
 }
 
+.card {
+  height: $cardHeight * $cardScale;
+  width: $cardWidth * $cardScale;
+  -webkit-border-radius: 18px * $cardScale;
+  -moz-border-radius: 18px * $cardScale;
+  border-radius: 18px * $cardScale;
+  z-index: 2;
+
+  &.black {
+	  background-color: black;
+	  color: white;
+	}
+
+	&.white {
+	  background-color: white;
+	  color: black;
+	  border: solid 1px black;
+
+		&.ui-sortable-helper {
+			transform: scale(1.02) rotate(2deg);
+			z-index: 3;
+		}
+
+		&:hover {
+			transform: scale(1.02);
+			z-index: 3;
+		}
+	}
+
+	&.front {
+	  background-size: 25px * $cardScale;
+	  background-repeat: no-repeat;
+	  background-position: 16px * $cardScale 333px * $cardScale;
+
+	  &.black {
+		  background-image: url(cah-logo-black.svg);
+		}
+
+		&.white {
+		  background-image: url(cah-logo-white.svg);
+		}
+
+		.card-text {
+		  font: 24px * $cardScale $font;
+		  font-weight: 700;
+		  padding: 18px * $cardScale 20px * $cardScale;
+		  color: inherit;
+		  @include disable-selection;
+		}
+
+		.card-text::after {
+		  content: "Cards Against Quarantine";
+		  display: block;
+		  bottom: 0;
+		  position: absolute;
+		  font: 9px * $cardScale $font;
+		  font-weight: 700;
+		  padding-bottom: 28px * $cardScale;
+		  padding-left: 22px * $cardScale;
+		}
+
+		.special {
+			&::before {
+				display: block;
+				position: absolute;
+				font: 18px * $cardScale $font;
+				font-weight: 700;
+				color: white;
+				right: 52px * $cardScale;
+			}
+
+			&.pick::before {
+				content: "PICK";
+				bottom: 26px * $cardScale;
+			}
+
+			&.draw::before {
+				content: "DRAW";
+				bottom: 58px * $cardScale;
+			}
+
+			&::after {
+				display: block;
+				position: absolute;
+				background-color: white;
+				height: 26px * $cardScale;
+				width: 26px * $cardScale;
+				color: black;
+				text-align: center;
+				border-radius: 15px * $cardScale;
+				font: 18px * $cardScale $font;
+				font-weight: 700;
+				line-height: 25px * $cardScale;
+				right: 22px * $cardScale;
+				content: "2";
+			}
+
+			&.pick::after {
+				bottom: 23px * $cardScale;
+			}
+
+			&.draw::after {
+				bottom: 55px * $cardScale;
+			}
+
+			&.pick.pick-three::after {	
+				content: "3";
+			}
+		}
+	}
+
+	&.back {
+		.card-text {
+		  font: 40px * $cardScale $font;
+		  font-weight: 700;
+		  padding: 18px * $cardScale 20px * $cardScale;
+		  padding-top: 30px * $cardScale;
+		  @include disable-selection;
+		}
+	}
+}
+
 #game-wrapper {
 	background-color: #f0f0f0;
 	height: 100%;
@@ -75,6 +197,86 @@ input[type=text] {
 	left: 0;
 	top: 0;
 	overflow: hidden;
+
+	#cur-black-card {
+		position: absolute;
+		left: calc(50% - #{$cardWidth * $cardScale / 2});
+		top: calc(40% - #{$cardHeight * $cardScale / 2 + 10px});
+		transform: scale(1.5);
+
+		@media only screen and (max-width: $firstTransitionWidth) {
+			top: calc(50% - #{$cardHeight * $cardScale + 10px});
+		}
+	}
+
+	#hand {
+		background-color: white;
+		position: absolute;
+		border: solid 1px $outlineColor;
+		width: 80%;
+		height: $cardHeight * $cardScale;
+		bottom: 0;
+		left: 10%;
+		right: 10%;
+		padding: 10px 0;
+		padding-bottom: 8px;
+		display: flex;
+		flex-direction: row;
+		justify-content: center;
+		border-bottom: none;
+		transition: $resizeTransition;
+
+		@media only screen and (max-width: $firstTransitionWidth) {
+			width: 100%;
+			left: 0;
+			right: 0;
+			border-left: 0;
+			border-right: 0;
+		}
+
+		@media only screen and (max-width: $handWidth) {
+			overflow-y: hidden;
+			overflow-x: scroll;
+			padding-bottom: 20px;
+			justify-content: flex-start;
+
+			scrollbar-color: $contrastColor transparent;
+
+			&::-webkit-scrollbar {
+			  height: 15px;
+			}
+
+			&::-webkit-scrollbar-thumb {
+			  border-radius: 25px;
+			  background-color: $contrastColor;
+			}
+
+			&::-webkit-scrollbar-track {
+			  border-radius: 25px;
+			  background-color: transparent;
+			}
+		}
+
+		.card {
+			flex: 0 0 auto;
+			margin: 0 $cardSpacing;
+
+			&:hover {
+				.card-text::after {
+					bottom: 0;
+				}
+			}
+
+			.card-text::after {
+			  bottom: 6px;
+			}
+
+			&.selected-card {
+				border: 2px solid $contrastColor;
+				margin: 0;
+			}
+		}
+	}
 
 	.text-container {
 		background-color: white;
@@ -370,186 +572,7 @@ input[type=text] {
 			}
 		}
 	}
-
-	// TODO: remove draggable
-
-	#hand {
-		background-color: white;
-		position: absolute;
-		border: solid 1px $outlineColor;
-		width: 80%;
-		height: $cardHeight * $cardScale;
-		bottom: 0;
-		left: 10%;
-		right: 10%;
-		padding: 10px 0;
-		padding-bottom: 2px;
-		display: flex;
-		flex-direction: row;
-		justify-content: center;
-		border-bottom: none;
-		transition: $resizeTransition;
-
-		@media only screen and (max-width: $firstTransitionWidth) {
-			width: 100%;
-			left: 0;
-			right: 0;
-			border-left: 0;
-			border-right: 0;
-		}
-
-		@media only screen and (max-width: $handWidth) {
-			overflow-y: hidden;
-			overflow-x: scroll;
-			padding-bottom: 20px;
-			justify-content: flex-start;
-
-			scrollbar-color: $contrastColor transparent;
-
-			&::-webkit-scrollbar {
-			  height: 15px;
-			}
-
-			&::-webkit-scrollbar-thumb {
-			  border-radius: 25px;
-			  background-color: $contrastColor;
-			}
-
-			&::-webkit-scrollbar-track {
-			  border-radius: 25px;
-			  background-color: transparent;
-			}
-		}
-
-		.card {
-			flex: 0 0 auto;
-			margin: 0 $cardSpacing;
-		}
-	}
 }
-
-.card {
-  height: $cardHeight * $cardScale;
-  width: $cardWidth * $cardScale;
-  -webkit-border-radius: 18px * $cardScale;
-  -moz-border-radius: 18px * $cardScale;
-  border-radius: 18px * $cardScale;
-  z-index: 2;
-
-  &.black {
-	  background-color: black;
-	  color: white;
-	}
-
-	&.white {
-	  background-color: white;
-	  color: black;
-	  border: solid 1px black;
-	}
-
-	&:hover {
-		transform: scale(1.02);
-		z-index: 3;
-	}
-
-	&.ui-draggable-dragging {
-		transform: scale(1.02) rotate(2deg);
-		z-index: 3;
-	}
-
-	&.front {
-	  background-size: 25px * $cardScale;
-	  background-repeat: no-repeat;
-	  background-position: 16px * $cardScale 333px * $cardScale;
-
-	  &.black {
-		  background-image: url(cah-logo-black.svg);
-		}
-
-		&.white {
-		  background-image: url(cah-logo-white.svg);
-		}
-
-		.card-text {
-		  font: 24px * $cardScale $font;
-		  font-weight: 700;
-		  padding: 18px * $cardScale 20px * $cardScale;
-		  color: inherit;
-		  @include disable-selection;
-		}
-
-		.card-text::after {
-		  content: "Cards Against Quarantine";
-		  display: block;
-		  bottom: 0;
-		  position: absolute;
-		  font: 9px * $cardScale $font;
-		  font-weight: 700;
-		  padding-bottom: 28px * $cardScale;
-		  padding-left: 22px * $cardScale;
-		}
-
-		.special {
-			&::before {
-				display: block;
-				position: absolute;
-				font: 18px * $cardScale $font;
-				font-weight: 700;
-				color: white;
-				right: 52px * $cardScale;
-			}
-
-			&.pick::before {
-				content: "PICK";
-				bottom: 26px * $cardScale;
-			}
-
-			&.draw::before {
-				content: "DRAW";
-				bottom: 58px * $cardScale;
-			}
-
-			&::after {
-				display: block;
-				position: absolute;
-				background-color: white;
-				height: 26px * $cardScale;
-				width: 26px * $cardScale;
-				color: black;
-				text-align: center;
-				border-radius: 15px * $cardScale;
-				font: 18px * $cardScale $font;
-				font-weight: 700;
-				line-height: 25px * $cardScale;
-				right: 22px * $cardScale;
-				content: "2";
-			}
-
-			&.pick::after {
-				bottom: 23px * $cardScale;
-			}
-
-			&.draw::after {
-				bottom: 55px * $cardScale;
-			}
-
-			&.pick.pick-three::after {	
-				content: "3";
-			}
-		}
-	}
-
-	&.back {
-		.card-text {
-		  font: 40px * $cardScale $font;
-		  font-weight: 700;
-		  padding: 18px * $cardScale 20px * $cardScale;
-		  padding-top: 30px * $cardScale;
-		  @include disable-selection;
-		}
-	}
-}
-
 
 #overlay-container {
 	position: fixed;

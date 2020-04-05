@@ -50,6 +50,7 @@ CREATE TABLE rooms (
 	edition VARCHAR(8),
 	rotate_czar BOOLEAN DEFAULT FALSE,
 	cur_czar INT NOT NULL,
+	cur_prompt INT,
 	PRIMARY KEY (id)
 );
 
