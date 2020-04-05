@@ -278,10 +278,17 @@ input[type=text] {
 			margin: 10px;
 			transition: $resizeTransition;
 
+
+			&.selected-card {
+				border: 2px solid $contrastColor;
+				margin: 9px;
+			}
+
 			.card-text::after {
+				display: none;
+
+				// TODO: fix jumpy bottom text during transition from hover;
 			  bottom: 112px;
-
-
 
 				@media only screen and (min-width: 1450px) {
 					bottom: 3px;
@@ -292,6 +299,7 @@ input[type=text] {
 			}
 
 			&:hover {
+				transition: none;
 				.card-text::after {
 					bottom: 0;
 				}
@@ -309,6 +317,10 @@ input[type=text] {
 		@media only screen and (max-width: 1550px) {
 			.card {
 				margin: 5px;
+
+				&.selected-card {
+					margin: 4px;
+				}
 			}
 		}
 
@@ -358,7 +370,7 @@ input[type=text] {
 				transform: scale(1.15);
 			}
 
-			@media only screen and (max-width: 1450px) {
+			@media only screen and (max-width: 1450px) and (min-width: $firstTransitionWidth) {
 				transform: scale(1.25);
 				left: 28.5%;
 				&.czar-mode {

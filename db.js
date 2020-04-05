@@ -72,7 +72,13 @@ exports.addUserToRoom = (userId, roomId, state, fn=null) => {
 exports.getRoom = (roomId, fn) => {
   if (!roomId) return fn({error: "Room ID is required"});
   var sql = `
-    SELECT token, edition, rotate_czar as rotateCzar, cur_prompt as curPrompt, state
+    SELECT 
+      token, 
+      edition, 
+      rotate_czar as rotateCzar, 
+      cur_prompt as curPrompt, 
+      state, 
+      selected_response as selectedResponse
     FROM rooms
     WHERE id = ?;
   `;
@@ -91,7 +97,8 @@ exports.getRoom = (roomId, fn) => {
       edition: results[0].edition,
       rotateCzar: results[0].rotateCzar,
       curPrompt: results[0].curPrompt,
-      state: results[0].state
+      state: results[0].state,
+      selectedResponse: results[0].selectedResponse
     });
   });
 };
@@ -271,12 +278,11 @@ function getCards(roomId, black, count, fn) {
         FROM room_packs
         WHERE room_id = ${roomId}
       )
-    )
-    AND id NOT IN (
+    ) AND id NOT IN (
       SELECT card_id
       FROM room_${color}_cards
       WHERE room_id = ${roomId}
-    )
+    ) ${black ? "AND pick = 1" : ""}
     ORDER BY RAND()
     LIMIT ${count};
   `;

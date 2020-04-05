@@ -696,6 +696,28 @@ socket.on("revealResponse", (data) => {
   cardElement.removeClass("back").addClass("front");
   cardElement.children(".card-text").text(data.card.text);
   cardElement.attr("id", "response-revealed-" + data.card.id);
+
+  if (users[userId].state == UserStates.czar) {
+    $("#response-revealed-" + data.card.id).off("click").on("click", event => {
+      if (selectedCard) {
+        $("#response-revealed-" + selectedCard).removeClass("selected-card");
+      }
+      $("#response-revealed-" + data.card.id).addClass("selected-card");
+      selectedCard = data.card.id;
+
+      $("#select-winner").show();
+      $("#cur-black-card").addClass("czar-mode");
+
+      socket.emit("selectResponse", {cardId: data.card.id}, response => {
+        if (response.error) return console.warn("Failed to select response:", response.error);
+      });
+    });
+  }
+});
+
+socket.on("selectResponse", (data) => {
+  $(".selected-card").removeClass("selected-card");
+  if (data.cardId) $("#response-revealed-" + data.cardId).addClass("selected-card");
 });
 
 /********************
@@ -721,7 +743,7 @@ function addResponseCard(id, isCzar) {
 
   // Only the czar can reveal answers
   if (isCzar) {
-    $("#response-card-" + id).click(event => {
+    $("#response-card-" + id).on("click", event => {
       socket.emit("revealResponse", {position: id}, response => {
         if (response.error) return console.warn("Failed to reveal respose #" + id + ":", response.error);
       });
@@ -777,10 +799,20 @@ $("#hand").sortable({
 });
 
 $("#game-wrapper").click(event => {
-  if (!submittingCard && selectedCard && ($(event.target).is("#game-wrapper") || $(event.target).is("#hand"))) {
+  if (!submittingCard && selectedCard && ($(event.target).is("#game-wrapper") || $(event.target).is("#hand") || $(event.target).is("#response-cards"))) {
     $("#white-card-" + selectedCard).removeClass("selected-card");
+    $("#response-revealed-" + selectedCard).removeClass("selected-card");
     selectedCard = null;
-    $("#central-action").hide();
+
+    if (room.state == RoomStates.readingCards) {
+      $("#select-winner").hide();
+      $("#cur-black-card").removeClass("czar-mode");
+      socket.emit("selectResponse", {cardId: null}, response => {
+        if (response.error) return console.warn("Failed to deselect card:", response.error);
+      });
+    } else {
+      $("#central-action").hide();
+    }
   }
 })
 

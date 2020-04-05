@@ -64,6 +64,7 @@ CREATE TABLE rooms (
 	rotate_czar BOOLEAN DEFAULT FALSE,
 	cur_prompt INT,
 	state TINYINT NOT NULL DEFAULT 1,
+	selected_response INT,
 	PRIMARY KEY (id)
 );
 

@@ -687,6 +687,52 @@ function initSocket(socket, userId) {
     });
   });
 
+  socket.on("selectResponse", (data, fn) => {
+    if (data.cardId != null && !helpers.validateUInt(data.cardId)) return fn({error: "Invalid Card ID"});
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+    if (user.state != vars.UserStates.czar) {
+      console.warn("User #" + userId + " with state '" + user.state + "' tried to reveal a response!");
+      return fn({error: "Invalid User State"});
+    }
+
+    db.getRoom(user.roomId, room => {
+      if (room.error) return fn(room);
+      if (room.state != vars.RoomStates.readingCards) return fn({error: "Invalid Room State"});
+
+      db.getRoomUsers(user.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get users when revealing card in room #" + user.roomId);
+          return fn(response);
+        } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+        if (data.cardId != null) {
+          db.getWhiteCardByID(data.cardId, card => {
+            if (card.error) return fn(card);
+
+            finishSelectResponse(user, response, data.cardId);
+          });
+        } else finishSelectResponse(user, response, null);
+      });
+    });
+  });
+
+  function finishSelectResponse(user, roomUserInfo, cardId) {
+    db.query(`UPDATE rooms SET selected_response = ? WHERE id = ?;`,
+    [cardId, user.roomId], (err, result) => {
+      if (err) {
+        console.warn("Failed to update selected card for room #" + user.roomId);
+        return fn({error: "MySQL Error"});
+      }
+
+      roomUserInfo.userIds.forEach(roomUserId => {
+        if (!users.hasOwnProperty(roomUserId) || roomUserId == userId) return;
+
+        users[roomUserId].socket.emit("selectResponse", {cardId: cardId});
+      });
+    });
+  }
+
   /***************
    * Chat System *
    ***************/
