@@ -622,7 +622,7 @@ function appendCard(card, target) {
   if (card.draw || card.pick) {
     if (card.draw == 2) html += `<div class="special draw"></div>`;
 
-    var pick = card.special.pick;
+    var pick = card.pick;
     if (pick > 1) {
       html += `<div class="special pick`;
       if (pick > 2) html += " pick-three";
@@ -659,5 +659,12 @@ $(".card-storage").droppable({
 });
 
 $("#black-deck").click(event => {
-  console.log("wow");
+  if ($("#cur-black-card").empty()) {
+    appendCard({
+      id: 1,
+      text: "Make a haiku",
+      pick: 3,
+      draw: 2
+    }, $("#cur-black-card"));
+  }
 });

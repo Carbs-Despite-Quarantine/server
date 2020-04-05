@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Cards Against Humanity</title>
+	<title>Cards Against Quarantine</title>
 	<link rel="stylesheet" type="text/css" href="inc/main.css">
 	<script 
 		src="https://code.jquery.com/jquery-3.4.1.min.js" 
@@ -24,10 +24,12 @@
 </head>
 <body>
 	<div id="game-wrapper">
-		<div class="card-storage" id="deck">
+		<div class="card-storage card-stack" id="deck">
 			<div class="card black back" id="black-deck">
-				<div class="card-text">Cards Against Humanity</div>
+				<div class="card-text">Cards Against Quarantine</div>
 			</div>
+		</div>
+		<div class="card-storage card-stack" id="cur-black-card">
 		</div>
 		<div class="card-storage" id="hand"></div>
 		<div id="chat-container">
@@ -46,8 +48,8 @@
 		<div class="overlay-window" id="user-setup-window">
 			<div id="settings-panel">
 				<div id="settings-title">
-					<h1>Cards Against Humanity</h1>
-					<p>A party game for horrible people.</p><br />
+					<h1>Cards Against Quarantine</h1>
+					<p>A party game for isolated people.</p><br />
 				</div>
 				<i id="setup-spinner" class="fas fa-spinner fa-spin fa-3x fa-fw"></i>
 				<div id="select-icon">

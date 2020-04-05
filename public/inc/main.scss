@@ -387,20 +387,34 @@ input[type=text] {
 			}
 		}
 
-		&#deck {
+		&.card-stack {
 			padding: 10px;
-			left: 10%;
-			top: 10%;
 			transition: $resizeTransition;
+			top: 10%;
 
 			@media only screen and (max-width: $firstTransitionWidth) {
-				left: 20px;
 				top: 20px;
 				transition: $resizeTransition;
 			}
 
 			.card {
 				position: absolute;
+			}
+
+			&#deck {
+				left: 10%;
+
+				@media only screen and (max-width: $firstTransitionWidth) {
+					left: 20px;
+				}
+			}
+
+			&#cur-black-card {
+				left: calc(10% + 40px + #{$cardWidth * $cardScale});
+
+				@media only screen and (max-width: $firstTransitionWidth) {
+					left: 60px + $cardWidth * $cardScale;
+				}
 			}
 		}
 	}
@@ -457,7 +471,7 @@ input[type=text] {
 		}
 
 		.card-text::after {
-		  content: "Cards Against Humanity";
+		  content: "Cards Against Quarantine";
 		  display: block;
 		  bottom: 0;
 		  position: absolute;

@@ -119,5 +119,6 @@ INSERT INTO editions (id, name) VALUES
 	( 'CA', 'Canadian Edition' ),
 	( 'AU', 'Australian Edition' ),
 	( 'INTL', 'International Edition' ),
-	( 'KS', 'Kickstarter Edition' )
+	( 'KS', 'Kickstarter Edition' ),
+	( 'FAMILY', 'Family Edition' )
 ;

@@ -38,7 +38,7 @@ def parseCard(row, pack):
            whiteCards.append(Card(text, pack, versions))
 
 # Parse the base game cards
-with open ("basecards.csv") as basecards:
+with open ("basecards.csv", encoding="utf8") as basecards:
   csv_reader = csv.reader(basecards, delimiter=',')
   line = 0
   versionNames = {}

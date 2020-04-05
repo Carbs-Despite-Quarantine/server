@@ -1,5 +1,5 @@
-,Edition,,US,US,US,US,US,US,US,UK,US,UK,CA,AU,US,CA,UK,AU,CA,US,CA,UK,AU,INTL,US,
-Set,Cards Against Humanity: Main Deck,Special,KICKSTARTER,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
+,Edition,,US,US,US,US,US,US,US,UK,US,UK,CA,AU,US,CA,UK,AU,CA,US,CA,UK,AU,INTL,US,FAMILY
+Set,Cards Against Humanity: Main Deck,Special,KICKSTARTER,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,v2.0
 Prompt,______ + ______ = ______.,"DRAW 2, PICK 3",KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Prompt,______ is a slippery slope that leads to ______.,PICK 2,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Prompt,______ would be woefully incomplete without ______.,PICK 2,,,,,,,,,,,,,,,,,,,,,,v2.0,,
@@ -17,7 +17,7 @@ Prompt,______. It's a trap!,,,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,
 Prompt,______. That was so metal.,,,,,,,,,,,,,,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Prompt,______. That's how I want to die.,,KS,v1.0,,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,,,,,,,,,,,,
 Prompt,______. That's why mums go to Iceland.,,,,,,,,,v1.5,,v1.6,,,,,v1.7,,,,,v2.0,,,,
-Prompt,★✰✰✰✰ Do NOT go here! Found _____ in my Kung Pao chicken! ,,,,,,,,,,,,,,,,,,,v2.0,v2.0,,v2.0,,v2.1,
+Prompt,★✰✰✰✰ Do NOT go here! Found _____ in my Kung Pao chicken!,,,,,,,,,,,,,,,,,,,v2.0,v2.0,,v2.0,,v2.1,
 Prompt,50% of all marriages end in ______.,,,,,,,,,,,,,,,,,,,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Prompt,A recent laboratory study shows that undergraduates have 50% less sex after being exposed to ______.,,,,,,,,,,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Prompt,A remarkable new study has shown that chimps have evolved their own primitive version of ______.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
@@ -35,7 +35,7 @@ Prompt,Air Canada guidelines now prohibit ______ on airplanes.,,,,,,,,,,,,,,,v1.
 Prompt,Airport security guidelines now prohibit ______ on airplanes.,,,,,,,,,v1.5,,v1.6,,,,,v1.7,,,,,v2.0,,,,
 Prompt,Alternative medicine is now embracing the curative powers of ______.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Prompt,And the Academy Award for ______ goes to ______.,PICK 2,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,,v1.6,,v1.6,v1.6,v1.7,v1.7,,v1.7,v1.7a,v2.0,v2.0,,v2.0,v2.0,v2.1,
-Prompt,And the BAFTA for ______ goes to ______. ,,,,,,,,,v1.5,,v1.6,,,,,v1.7,,,,,v2.0,,,,
+Prompt,And the BAFTA for ______ goes to ______.,,,,,,,,,v1.5,,v1.6,,,,,v1.7,,,,,v2.0,,,,
 Prompt,And what did you bring for show and tell?,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
 Prompt,Anthropologists have recently discovered a primitive tribe that worships ______.,,KS,v1.0,v1.1,v1.2,,,,,,,,,,,,,,,,,,,,
 Prompt,Arby's: We Have ______.,,,,,,,,,,,,,,,,,,,v2.0,,,,,v2.1,
@@ -157,14 +157,13 @@ Prompt,MTV's new reality show features eight washed-up celebrities living with _
 Prompt,"My fellow Americans: Before this decade is out, we will have ______ on the moon!",,,,,,,,,,,,,,,,,,,v2.0,v2.0,,,,v2.1,
 Prompt,My mom freaked out when she looked at my browser history and found ______.com/______.,PICK 2,,,,,,,,,,,,,,,,,,,,,,v2.0,,
 Prompt,My plan for world domination begins with ______.,PICK 2,,,,,,,,,,,,,,,,,,,,,,v2.0,,
-Prompt,Next from J.K. Rowling: Harry Potter and the Chamber of ______.,,,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
+Prompt,Next from J.K. Rowling: Harry Potter and the Chamber of ______.,,,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,v2.0
 Prompt,Next from J.K. Rowling: Harry Potter and the Chamber of ______.,,KS,,,,,,,,,,,,,,,,,,,,,,,
 Prompt,Next on ESPN2: The World Series of ______.,,,,,v1.2,v1.3,v1.4,v1.5,,v1.6,,v1.6,,v1.7,,,,,v2.0,,,,,v2.1,
 Prompt,Next on Eurosport: The World Championship of _______.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
 Prompt,Next on Nine's Wide World of Sports: The World Championship of ______.,,,,,,,,,,,,,v1.6,,,,v1.7,,,,,v2.0,,,
 Prompt,Next on Sky Sports: The World Championship of ________.,,,,,,,,,v1.5,,v1.6,,,,,v1.7,,,,,,,,,
-Prompt,Next on Sky Sports: The World Champsion of ________.,,,,,,,,,,,,,,,,,,,,,v2.0,,,,"Card with typo discovered by MrTimofTim and confirmed by NakedReporta and bhantoot from CAH.
-https://goo.gl/Mmhvof"
+Prompt,Next on Sky Sports: The World Champsion of ________.,,,,,,,,,,,,,,,,,,,,,v2.0,,,,
 Prompt,Next on TSN: The World Series of ______.,,,,,,,,,,,,,,,v1.7,,,v1.7a,,v2.0,,,,,
 Prompt,Next up on Channel 4: Ramsay's ______ Nightmares.,,,,,,,,,,,,,,,,,,,,,v2.0,,,,
 Prompt,"Nobody expects the Spanish Inquisition. Our chief weapons are fear, surprise, and ________.",,,,,,,,,v1.5,,v1.6,,,,,v1.7,,,,,v2.0,,,,
@@ -734,7 +733,7 @@ Response,Fake tits.,,,,,,,,,,,,,,,,,,,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,FALCON PUNCH!!!,,KS,v1.0,v1.1,,,,,,,,,,,,,,,,,,,,,
 Response,Famine.,,,,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Response,Fancy Feast®.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,,v1.6,,v1.6,,v1.7,v1.7,,,v1.7a,v2.0,v2.0,,,,v2.1,
-Response,Farting and walking away.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
+Response,Farting and walking away.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,v2.0
 Response,Farting into your petticoats and wafting it at Lord Gregory.,,KS,v1.0,v1.1,,,,,,,,,,,,,,,,,,,,,
 Response,Fear itself.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,Feeding Rosie O'Donnell.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,,,,,,,,,,,,,,,,,,
@@ -858,7 +857,7 @@ Response,Helplessly giggling at the mention of Hutus and Tutsis.,,,,,v1.2,v1.3,v
 Response,"Her Majesty, Queen Elizabeth II.",,,,,,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,"Her Royal Highness, Queen Elizabeth II.",,KS,v1.0,v1.1,v1.2,,,,,,,,,,,,,,,,,,,,
 Response,Heritage minutes.,,,,,,,,,,,,v1.6,,,v1.7,,,v1.7a,,v2.0,,,,,
-Response,Heritage minutes.,,,,,,,,,,,,,,,v1.7,,,,,,,,,,"Duplicate card - confirmed independently by NakedReporta, ACanadianPenguin and Tennberg"
+Response,Heritage minutes.,,,,,,,,,,,,,,,v1.7,,,,,,,,,,
 Response,Heroin.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
 Response,Heteronormativity.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,,v1.6,,v1.6,,v1.7,v1.7,,,v1.7a,v2.0,v2.0,,,,v2.1,
 Response,Hillary Clinton's emails.,,,,,,,,,,,,,,,,,,,v2.0,,,,,v2.1,
@@ -1020,7 +1019,7 @@ Response,Mountain Dew Code Red.,,,,v1.1,,,,,,,,,,,,,,,,,,,,,
 Response,Mouth herpes.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,"Mr. Clean, right behind you.",,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,,v1.6,,v1.6,,v1.7,v1.7,,,v1.7a,,,,,,,
 Response,Mr. Dressup.,,,,,,,,,,,,v1.6,,,v1.7,,,v1.7a,,v2.0,,,,,
-Response,Mr. Dressup.,,,,,,,,,,,,,,,v1.7,,,v1.7a,,,,,,,"Duplicate card - confirmed independently by NakedReporta, ACanadianPenguin and Tennberg"
+Response,Mr. Dressup.,,,,,,,,,,,,,,,v1.7,,,v1.7a,,,,,,,
 Response,Mr. Snuffleupagus.,,KS,v1.0,v1.1,,,,,,,,,,,,,,,,,,,,,
 Response,"Mr. Squiggle, the Man from the Moon.",,,,,,,,,,,,,v1.6,,,,v1.7,,,,,v2.0,,,
 Response,Muhammad (Peace Be Upon Him).,,,,,,,,,,,,,,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
@@ -1067,7 +1066,7 @@ Response,NBA superstar LeBron James.,,,,,,,,,,,,,,,,,,,v2.0,v2.0,,v2.0,,v2.1,
 Response,Necrophilia.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,New Age music.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,,v1.6,v1.7,,v1.7,v1.7,,,,,,,,
 Response,Newfies.,,,,,,,,,,,,v1.6,,,v1.7,,,v1.7a,,v2.0,,,,,
-Response,Newfies.,,,,,,,,,,,,,,,v1.7,,,,,,,,,,"Duplicate card - confirmed independently by NakedReporta, ACanadianPenguin and Tennberg."
+Response,Newfies.,,,,,,,,,,,,,,,v1.7,,,,,,,,,,
 Response,Nickelback.,,,,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,,
 Response,Nicolas Cage.,,,,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,Nip slips.,,KS,v1.0,v1.1,,,,,,,,,,,,,,,,,,,,,
@@ -1179,7 +1178,7 @@ Response,Rehab.,,,,v1.1,,v1.3,v1.4,,v1.5,,,,,,,,,,,,,,,,
 Response,Repression.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,Republicans.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,,v1.6,,v1.6,,v1.7,v1.7,,,v1.7a,v2.0,v2.0,,,,v2.1,
 Response,Reverse cowgirl.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
-Response,Rich people.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
+Response,Rich people.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,v2.0
 Response,Riding off into the sunset.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,,v1.6,,,,,,,,,,,,
 Response,Ring Pops.,,KS,,,,,,,,,,,,,,,,,,,,,,,
 Response,Ring Pops™.,,,v1.0,v1.1,,,,,,,,,,,,,,,,,,,,,
@@ -1298,7 +1297,7 @@ Response,Spontaneous human combustion.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1
 Response,Stalin.,,,,,,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,"Staring at a painting and going ""hmmmmmmm...""",,,,,,,,,,,,,,,,,,,,,,,v2.0,,
 Response,Stephen Harper.,,,,,,,,,,,,v1.6,,,v1.7,,,v1.7a,,,,,,,
-Response,Stephen Harper.,,,,,,,,,,,,,,,v1.7,,,,,,,,,,"Duplicate card - confirmed independently by NakedReporta, ACanadianPenguin and Tennberg"
+Response,Stephen Harper.,,,,,,,,,,,,,,,v1.7,,,,,,,,,,
 Response,Stephen Hawking talking dirty.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,,
 Response,Steve Bannon.,,,,,,,,,,,,,,,,,,,v2.0,,,,,,
 Response,Steve Irwin.,,KS,v1.0,v1.1,,,,,,,,,v1.6,,,,v1.7,,,,,v2.0,,,
@@ -1539,7 +1538,7 @@ Response,Whipping it out.,,,,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v
 Response,Whiskas® Catmilk.,,,,,,,,,,,,,v1.6,,,,v1.7,,,,,v2.0,,,
 Response,White people.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
 Response,White power.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
-Response,White power.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,Duplicate card in INTL v2.0 set.
+Response,White power.,,,,,,,,,,,,,,,,,,,,,,,v2.0,,
 Response,White privilege.,,,,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,,v2.1,
 Response,White-man scalps.,,,,,,,,,,v1.6,,v1.6,,v1.7,v1.7,,,v1.7a,,,,,,,
 Response,Whoever the Prime Minister is these days.,,,,,,,,,,,,,,,,,,,,,,v2.0,,,
@@ -1567,3 +1566,419 @@ Response,Yeast.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,v1.7,
 Response,YOU MUST CONSTRUCT ADDITIONAL PYLONS.,,KS,v1.0,v1.1,v1.2,v1.3,v1.4,v1.5,v1.5,v1.6,v1.6,v1.6,v1.6,,,,,,,,,,,,
 Response,Your mum.,,,,,,,,,,,,,,,,,,,,,v2.0,,,,
 Response,Your weird brother.,,,,,,,,,,v1.6,v1.6,v1.6,v1.6,v1.7,v1.7,v1.7,v1.7,v1.7a,v2.0,v2.0,v2.0,v2.0,v2.0,v2.1,
+Prompt,"Class, pay close attention. I will now demonstrate the physics of  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Coming to theaters this holiday season, “Star Wars: The Rise of  ______.”",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Never fear, Captain  ______ is here!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"I don’t really know what my mom’s job is, but I think it has something to do with  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,What’s about to take this school dance to the next level?,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Shut up, Becky! At least I’m not  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Oh, no thank you, Mrs. Lee. I’ve had plenty of  ______ for now.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,MY NAME CHUNGO. CHUNGO LOVE  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Foolish child! Did you think you could escape from  ______?,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Beep beep!  ______ coming through!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,My favorite book is “The Amazing Adventures of  ______.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"We’re off to see the wizard, the wonderful wizard of  ______!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Boys? No.  ______? Yes!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"At school, I’m just Mandy. But at summer camp, I’m “ ______ Mandy.”",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,We’re not supposed to go in the attic. My parents keep  ______ in there.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Outback Steakhouse: No rules. Just  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,I have invented a new sport. I call it “ ______ ball.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Bow before me, for I am the Queen of  ______!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Guys, stop it! There’s nothing funny about  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Thanks for watching! If you want to see more vids of  ______, smash that subscribe button.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Hey, kids. I’m Sensei Todd. Today, I’m gonna teach you how to defend yourself against  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,There’s nothing better than a peanut butter and  ______ sandwich.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,CHUNGO FEEL SICK. CHUNGO NO LIKE  ______ ANYMORE.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,What killed Old Jim?,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Oh Dark Lord, we show our devotion with a humble offering of  ______!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Mom? You have to come pick me up! There’s  ______ at this party,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Run, run, as fast as you can. You can’t catch me, I’m !",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,They call me “Mr. ______.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,New from Mattel! It’s BUNGO: The Game of  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"One nation, under God, indivisible, with liberty and  ______ for all.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Moms love  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"My name is Peter Parker. I was bitten by a radioactive spider, and now I’m  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,The easiest way to tell me and my twin apart is that I have a freckle on my cheek and she’s  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,It’s BIG. It’s SCARY. It’s  ______!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,My dad and I enjoy  ______ together.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Attention students. This is Principal Butthead. Please remember that we do not allow  ______ in the hallway. Thank you.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Well, look at what we have here! A big fancy man walkin’ in like he’s  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Did you know that Benjamin Franklin invented  ______?,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Ladies and gentlemen, I have discovered something amazing. I have discovered  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Coming soon! Batman vs.  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Ew. Grandpa smells like  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Kids, Dad is trying something new this week. It’s called “  ______.”",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,James Bond will return in “No Time for  ______.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"The warm August air was filled with change. Things were different, for Emily was now  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,The aliens are here. They want  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Hey guys. I just want to tell all my followers who are struggling with  ______: it DOES get better.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Madam President, we’ve run out of time. The only option is  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Now in bookstores: Nancy Drew and the Mystery of  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Where do babies come from?,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Alright, which one of you little turds is responsible for  ______?!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"This is gonna be the best sleepover ever. Once Mom and Dad go to bed, it’s time for  ______!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"You don’t love me, Sam. All you care about is  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Huddle up, Wildcats! They may be bigger. They may be faster. But we’ve got a secret weapon:  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Come on, Danny. All the cool kids are doin’ it. Wanna try  ______?",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Today we honor St. Mungo, the patron saint of  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Me and my friends don’t play with dolls anymore. We’re into  ______ now.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,ENOUGH! I will not let  ______ tear this family apart!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,I lost my arm in a  ______ accident.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,Police! Arrest this man! He’s  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Time to put on my favorite t-shirt, the one that says “I heart  ______.”",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"When I pooped, what came out of my butt?",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Before I attend your sleepover, I must inform you: toys bore me, and I don’t care for sweets. I prefer  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Isn’t this great, honey? Just you, me, the kids, and  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Come with me, and I will show you a world of  ______.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Hey, check out my band! We’re called “Rage Against  ______.”",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Whoa there, partner! Looks like  ______ spooked my horse.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,"Joey, look out behind you! It’s  ______!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt, ______? No.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Prompt,ME HUNGRY. ME WANT  ______.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Mashing a banana into your belly button.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Saving up my boogers for ten years and then building the world’s largest booger.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Coffee.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Diarrhea.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Falling in love.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Drinking gasoline to see what it tastes like.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"My father, who is a walrus.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Not wearing pants.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The dentist.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The baby.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Old Jim’s Steamy Butt Sauce.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Boys.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Beautiful grandma.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Running away from home.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Nunchucks.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Bench pressing a horse.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Stuffing my underwear with pancakes.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Mayonnaise.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Pee-pee.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Obama,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,BULBASAUR.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,How much wood a woodchuck would chuck if a woodchuck could chuck wood.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The oppressive system of capitalism.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Big butt cheeks filled with poop.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Crying in the bathroom.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,One tough mama.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Spending my parents’ hard-earned money.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Chungo, the talking gorilla.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Biting a rich person.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Chest hair.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The bus driver.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Going bald.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Putting my butt on stuff.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Drinking a whole bottle of ranch.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Sacrificing Uncle Tim.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Peeing in the cat’s litter box.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Murdering.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Butts of all shapes and sizes.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A whole thing of cottage cheese.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Freeing a fart from its butt prison.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Butt surgery.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting stuck in the toilet.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Supreme Court Justice Ruth Bader Ginsburg.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The Underground Railroad.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A doll that pees real pee!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,John Wilkes Booth.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Love.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Knives.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Satan.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Jesus.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Putting my brain into the body of a tiger.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Unleashing a hell demon that will destroy our world.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Abraham Lincoln.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Thick, nasty burps.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Having a really big head.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting drunk.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Screaming into a can of Pringles.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Batman.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Cheeto fingers.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Elegant party hats.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Climbing into a cow’s butt.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Whatever dad does at work.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Sitting on a cake.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Overthrowing the government.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Butthole.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Stuff.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Pork.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Shoplifting.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Gluing my butt cheeks together,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Respecting personal boundaries.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Barfing into a popcorn bucket.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"The huge, stupid moon.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dump cake.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Principal Butthead.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"My girlfriend, who goes to another school.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Drinking out of the toilet and eating garbage.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Farting a lot today.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,SILENCE!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting a skull tattoo.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting shot out of a cannon.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Sharks.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The Russians.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Shaving Dad’s back.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A hot air balloon powered by fart gas.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting slapped with a fish.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Cigarettes.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Water.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Boogers.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Baby Yoda.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dancing with my son.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"A big, and I mean BIG turtle.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dreaming about boys.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Mowing the stupid lawn.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Chugging a gallon of milk and then vomiting a gallon of milk.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Beer.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Thousands of lasagna.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Person milk.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Having many husbands.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Rated-R stuff.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Most of a horse.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The British.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Tossed salads and scrambled eggs.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Old people.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Blasting farts in the powder room.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The beautiful potato.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dwayne “The Rock” Johnson.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A butt that eats underwear.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A dead body.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Climate change.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Failure.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Hogs.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Throwing up double peace signs with my besties at Starbucks.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"An old, dirty cat with bad breath.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The terrible winter of 1609.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The government.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The way grandpa smells.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Greta Thunberg.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dad’s meatloaf.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Living in the dumpster.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Feasting upon human flesh.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A big sad dragon with no friends.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Butt hair.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Licking a used bandaid.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Mom’s butt.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Only beans.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Covering myself with ketchup and mustard because I am hot dog.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Naked people.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A baby boomer.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A baby with a full mustache.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The first female President of the United States of America.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Moving to Ohio.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Fat stacks of cash.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Mom’s new haircut.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting a girlfriend.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting kicked in the nuts.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Voldemort.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Big, juicy pimples.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A turd that just won’t flush.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Josh.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Beyoncé.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Questioning authority.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Using balloons as boobies.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A bird pooping on the president’s head.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"14 cheeseburgers, 6 large fries, and a medium Sprite.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,This stupid game.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A scoop of tuna.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,China.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Swords.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A poop as big as Mom.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Punching everyone.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Burning books.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Making out in a closet.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,My annoying sister,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Teeny, tiny turds.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Illegal drugs.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The whole family.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Chunks.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Grandma panties.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Many wolves.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Shutting up.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Cat pee.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Having no friends.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The entire state of Texas.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Giggling and farting and slurping milkshakes.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Ariana Grande.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Putting an apple in a little boy’s mouth and roasting him for dinner.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting sucked into a jet engine.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,My parents.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A dead whale.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Sitting on the toilet and going poop.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Space lasers.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Never showering.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Politics.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Kevin’s mom.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting run over by a train.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Sniffing a dog’s butt.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A fake kid made out of wood.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,An owl that hates you.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,My big donkey brother.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Balls.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The sweet honking of Karen’s bassoon.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting scalded in the face with hot beans.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Being French, hoh-hoh-hoh!",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"This goat, who is my friend.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Smelling like onions.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Pooping barf forever.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Being adopted.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The old man with the rake who lives down the dark and winding road.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Seymour Butts.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Boobies.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Locking Mother in the pantry.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Fortnite.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Being famous on YouTube.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Going around sniffing people’s armpits.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Racism, sexism, and homophobia.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Legs.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Big, slappy hands.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The gluteus maximus.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,One weird lookin’ toe.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Punching a guy through a wall.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Having a baby.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting naked.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A planet-devouring space worm named “Rachel.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Evil.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A super angry cat I found outside.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Forgetting to put on underwear.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting my ponytail stuck in my butt.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Poo-poo.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Becoming taller and stronger than Father.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Teaching a chicken to kill.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Blossoming into a beautiful young man.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Doing karate.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Twerking.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Becoming the president.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Happy daddies with happy sandals.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Hurting people’s feelings.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A Republican.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,JoJo Siwa.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Blasting my math teacher into the sun.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,One long hair growing out of a mole.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"A nice, warm glass of pee.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Bursting into flames.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The babysitter.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,My future husband.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,My sister’s stupid boyfriend.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Coming back from the dead.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Having to pee so bad.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Feminism.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Spider-Man.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A screaming soccer dad.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Pooping on the neighbor’s lawn.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Big Mississippi boys.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Mom’s friend, Donna.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Glen’s fabulous body.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Fake news.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Nothing.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Your face.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Uranus.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Barf.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Puberty.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Stank breath.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Going night night.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Taking a dump in the pool.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Building a ladder of hot dogs to the moon.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A bear.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A Democrat.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The middle finger.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"A long, hot pee.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Trying to catch that dang raccoon.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,An order of mozzarella sticks.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A naked lady in a painting.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Harry Potter.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Tongue kissing.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A bunch of dead squirrels on a trampoline.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Grandpa.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A flamethrower.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Blowing up the Moon.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Girls.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A hug.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Lighting stuff on fire.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The way I feel when I see Kyle.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Having no bones.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Living in a pineapple under the sea.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Running full speed into a wall.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Kissing mom on the lips.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Going beast mode.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Nipples.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A corn dog.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Some freakin’ privacy.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Social media.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Triangles.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A hundred screaming monkeys.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Big Randy.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Going to Hell.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Father’s forbidden chocolates.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A black hole.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The octopus stuck to my face.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Wiping my butt.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Complaining.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Soup.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Garbage.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Your mom!,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Literally ruining my life.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Stealing people’s money and going to jail.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Turning 40.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Hot, fresh doodies.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Death.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Ham.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The loose skin at the joint of the elbow known as “the weenus.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Eating a baby.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Peeing into everyone’s mouth.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Bad parenting.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Trees.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Lice.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Pizza.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Cavities.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Flushing myself down the toilet.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A gerbil named “Gerbil.”,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Me, your dad.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Famous peanut scientist George Washington Carver.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dad’s famous poops.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A pregnant person.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Uncle Bob.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"A wise, old woman with no teeth and cloudy eyes.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Screaming and screaming and never waking up.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Finger teeth.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The divorce.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Aunt Linda.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Total crap.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Huge pants.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Dying of old age.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"An invisible giant who takes giant, visible poops.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting crushed by a piano.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Slapping that butt.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Eating toenail clippings.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The police.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The president.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Huge, hairy men.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Horrible allergies.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,My annoying brother.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Martin Luther King Jr.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"A long, long snake.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Flamin’ Hot Cheetos.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,A killer clown.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Me.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,You.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Bleeding.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"A cowboy who is half boy, half cow.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Poseidon, Lord of the Sea.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,"Farting, barfing, and passing out.",,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Shrek.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Squirty cheese.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Playing trumpet for the mayor.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Fire farts.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Floating through the void of space and time.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Screaming the F-word.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The wettest fart you ever heard.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Being dead.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Filling my butt with spaghetti.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Idiots.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Slowly turning into cheese.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,The garbage man.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Getting married.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Eating a whole roll of toilet paper.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Peer pressure.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Using my butt as a microwave.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
+Response,Crab-walking from the toilet to get more toilet paper.,,,,,,,,,,,,,,,,,,,,,,,,,v2.0
