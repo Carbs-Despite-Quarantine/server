@@ -75,10 +75,7 @@ CREATE TABLE users (
 	icon VARCHAR(16),
 	score INT NOT NULL DEFAULT 0,
 	state TINYINT NOT NULL DEFAULT 1,
-	PRIMARY KEY (id),
-	FOREIGN KEY (room_id)
-		REFERENCES rooms (id)
-		ON DELETE CASCADE
+	PRIMARY KEY (id)
 );
 
 CREATE TABLE messages (

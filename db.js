@@ -27,9 +27,26 @@ exports.query = (sql, params, fn) => {
  * Users *
  *********/
 
+exports.getUser = (userId, fn) => {
+  db.query(`SELECT * FROM users WHERE id = ?;`, [userId], (err, results) => {
+    if (err) {
+      console.warn("Failed to get user #" + userID + ":", err);
+      return fn({error: "MySQL Error"});
+    } else if (results.length === 0) return fn({error: "Invalid User ID"});
+    fn({
+      id: results[0].id,
+      name: results[0].name,
+      icon: results[0].icon,
+      roomId: results[0].room_id,
+      score: results[0].score,
+      state: results[0].state
+    });
+  });
+};
+
 exports.setUserIcon = (userId, icon) => {
   db.query(`UPDATE users SET icon = ? WHERE id = ?;`, 
-  [icon, userId],(err, result) => {
+  [icon, userId],(err) => {
     if (err) return console.warn("Failed to set icon for user #" + userId + ":", err);
     console.debug("Set icon for user #" + userId + " to '" + icon + "'");
   });
@@ -37,7 +54,7 @@ exports.setUserIcon = (userId, icon) => {
 
 exports.setUserName = (userId, name) => {
   db.query(`UPDATE users SET name = ? WHERE id = ?;`, 
-  [name, userId],(err, result) => {
+  [name, userId],(err) => {
     if (err) return console.warn("Failed to set name for user #" + userId + ":", err);
     console.debug("Set name for user #" + userId + " to '" + name + "'");
   });
@@ -45,7 +62,7 @@ exports.setUserName = (userId, name) => {
 
 exports.setUserState = (userId, state) => {
   db.query(`UPDATE users SET state = ? WHERE id = ?;`, 
-  [state, userId],(err, result) => {
+  [state, userId],(err) => {
     if (err) return console.warn("Failed to set state for user #" + userId + ":", err);
     console.debug("Set state for user #" + userId + " to '" + state + "'");
   });
@@ -53,7 +70,7 @@ exports.setUserState = (userId, state) => {
 
 exports.setWinner = (userId, score) => {
   db.query(`UPDATE users SET score = ?, state = ${vars.UserStates.winner} WHERE id = ?;`, 
-  [score, userId],(err, result) => {
+  [score, userId],(err) => {
     if (err) return console.warn("Failed to set score for user #" + userId + ":", err);
     console.debug("Set score for user #" + userId + " to '" + score + "'");
   });
@@ -64,7 +81,7 @@ exports.addUserToRoom = (userId, roomId, state, fn=null) => {
     roomId,
     state,
     userId
-  ], (err, result) => {
+  ], (err) => {
     if (err) {
       if (fn) fn({error: "MySQL Error"});
       return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
@@ -74,13 +91,22 @@ exports.addUserToRoom = (userId, roomId, state, fn=null) => {
   });
 };
 
+exports.deleteUser = (userId) => {
+  db.query(`DELETE FROM users WHERE id = ?;`, [
+    userId
+  ], (err) => {
+    if (err) return console.warn("Failed to delete user #" + userId + ":", err);
+    console.log("Deleted user #" + userId);
+  });
+};
+
 /*********
  * Rooms *
  *********/
 
 exports.getRoom = (roomId, fn) => {
   if (!roomId) return fn({error: "Room ID is required"});
-  var sql = `
+  let sql = `
     SELECT 
       token, 
       edition, 
@@ -93,11 +119,11 @@ exports.getRoom = (roomId, fn) => {
   `;
   db.query(sql, [
     roomId
-  ],(err, results, fields) => {
+  ],(err, results) => {
     if (err) {
       console.warn("Failed to get room #" + roomId + ":", err);
       return fn({error: "MySQL Error"});
-    } else if (results.length == 0) {
+    } else if (results.length === 0) {
       return fn({error: "Invalid Room ID"});
     }
     fn({
@@ -116,7 +142,7 @@ exports.getRoomWithToken = (roomId, token, fn) => {
   if (!helpers.validateHash(token, 8)) return fn({error: "Token is required"});
   exports.getRoom(roomId, room => {
     if (room.error) return fn(room);
-    if (room.token != token) return fn({error: "Invalid Token"});
+    if (room.token !== token) return fn({error: "Invalid Token"});
     return fn(room);
   });
 };
@@ -124,14 +150,14 @@ exports.getRoomWithToken = (roomId, token, fn) => {
 exports.getRoomUsers = (roomId, fn) => {
   db.query(`SELECT id, name, icon, score, state FROM users WHERE room_id = ?;`, [
     roomId
-  ],(err, results, fields) => {
+  ],(err, results) => {
     if (err) {
       console.warn("Failed to get users for room #" + roomId + ":", err);
       return fn({error: "MySQL Error"});
     }
 
-    var roomUsers = {};
-    var roomUserIds = [];
+    let roomUsers = {};
+    let roomUserIds = [];
 
     // Convert arrays to objects (TODO: efficiency?)
     results.forEach(row => {
@@ -140,6 +166,7 @@ exports.getRoomUsers = (roomId, fn) => {
         id: row.id,
         name: row.name,
         icon: row.icon,
+        roomId: roomId,
         score: row.score,
         state: row.state
       };
@@ -151,24 +178,15 @@ exports.getRoomUsers = (roomId, fn) => {
 exports.deleteRoom = (roomId) => {
   db.query(`DELETE FROM rooms WHERE id = ?;`, [
     roomId
-  ], (err, result) => {
+  ], (err) => {
     if (err) return console.warn("Failed to delete room #" + roomId + ":", err);
     console.log("Deleted room #" + roomId);
   });
 };
 
-exports.deleteUser = (userId) => {
-  db.query(`DELETE FROM users WHERE id = ?;`, [
-    userId
-  ], (err, result) => {
-    if (err) return console.warn("Failed to delete user #" + userId + ":", err);
-    console.log("Deleted user #" + userId);
-  });
-};
-
 exports.setRoomState = (roomId, state, fn=null) => {
   db.query(`UPDATE rooms SET state = ? WHERE id = ?;`, 
-  [state, roomId],(err, result) => {
+  [state, roomId],(err) => {
     if (err) return console.warn("Failed to set state for room #" + roomId + ":", err);
     console.debug("Set state for room #" + roomId + " to '" + state + "'");
     if (fn) fn({});
@@ -180,7 +198,7 @@ exports.setRoomState = (roomId, state, fn=null) => {
  ********/
 
 exports.getLatestMessages = (roomId, limit, fn) => {
-  var sql = `
+  db.query(`
     SELECT 
       msg.id, 
       msg.user_id AS userId, 
@@ -192,16 +210,13 @@ exports.getLatestMessages = (roomId, limit, fn) => {
     WHERE room_id = ?
     GROUP BY msg.id
     ORDER BY msg.id DESC
-    LIMIT ?;`;
-  db.query(sql, [
-    roomId,
-    limit
-  ],(err, results, fields) => {
+    LIMIT ?;
+  `, [roomId, limit],(err, results) => {
     if (err) {
       console.warn("Failed to get messages for room #" + roomId + ":", err);
       return fn({error: "MySQL Error"});
     }
-    var roomMessages = {};
+    let roomMessages = {};
 
     results.forEach(row => {
       roomMessages[row.id] = {
@@ -223,17 +238,12 @@ exports.createMessage = (userId, content, isSystemMsg, fn) => {
   db.query(`
     INSERT INTO messages (room_id, user_id, content, system_msg) 
     VALUES ((SELECT room_id FROM users WHERE id = ?), ?, ?, ?);
-  `, [
-    userId,
-    userId,
-    content,
-    isSystemMsg
-  ], (err, result) => {
+  `, [userId, userId, content, isSystemMsg], (err, result) => {
     if (err) {
       console.warn("Failed to create message:", err);
       return fn({error: "MySQL Error"});
     }
-    var msgId = result.insertId;
+    let msgId = result.insertId;
 
     // Create an object to represent the message on the client
     fn({
@@ -252,13 +262,13 @@ exports.createMessage = (userId, content, isSystemMsg, fn) => {
 
 function getCardByID(id, black, fn) {
   if (!helpers.validateUInt(id)) return fn({error: "Card ID must be an int"});
-  var color = black ? "black" : "white";
+  let color = black ? "black" : "white";
   db.query(`SELECT * FROM ${color}_cards WHERE id = ?;`, 
-  [id], (err, results, fields) => {
+  [id], (err, results) => {
     if (err) {
       console.warn("Failed to get " + color + " card #" + id + ":" + err);
       return fn({error: "MySQL Error"});
-    } else if (results.length == 0) {
+    } else if (results.length === 0) {
       console.warn("Didn't find " + color + " card id with #" + id);
       return fn({error: "Invalid Card ID"});
     }
@@ -269,8 +279,9 @@ function getCardByID(id, black, fn) {
 function getCards(roomId, black, count, fn) {
   if (!helpers.validateUInt(roomId)) return fn({error: "Invalid Room ID"});
   if (!helpers.validateUInt(count)) count = 1;
-  var color = black ? "black" : "white";
-  var sql = `
+  let color = black ? "black" : "white";
+
+  db.query(`
     SELECT *
     FROM ${color}_cards
     WHERE id IN (
@@ -296,12 +307,11 @@ function getCards(roomId, black, count, fn) {
     ) ${black ? "AND pick = 1" : ""}
     ORDER BY RAND()
     LIMIT ${count};
-  `;
-  db.query(sql, (err, results, fields) => {
+  `, (err, results) => {
     if (err) {
       console.warn(`Failed to get ${color} card:`, err);
       return fn({error: "MySQL Error"});
-    } else if (results.length == 0) return fn({error: "No cards left!"});
+    } else if (results.length === 0) return fn({error: "No cards left!"});
     return fn(results);
   });
 }
@@ -317,12 +327,12 @@ exports.getBlackCard = (roomId, fn) => {
     });
 
     db.query(`INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)`, 
-    [ results[0].id, roomId ], (err, results) => {
+    [ results[0].id, roomId ], (err) => {
       if (err) return console.warn("Failed to mark black card as used:", err);
     });
 
     db.query(`UPDATE rooms SET cur_prompt = ? WHERE id = ?`, 
-    [ results[0].id, roomId ], (err, results) => {
+    [ results[0].id, roomId ], (err) => {
       if (err) return console.warn("Failed to update prompt for room #" + roomId + ":", err);
     });
   });
@@ -345,20 +355,20 @@ exports.getWhiteCards = (roomId, userId, count, fn) => {
   getCards(roomId, false, count, results => {
     if (results.error) return fn(results);
 
-    var cards = {};
-    var cardsSql = [];
+    let cards = {};
+    let cardsSql = [];
 
     results.forEach(result => {
       cardsSql.push(`(${result.id}, ${roomId}, ${userId})`);
       if (count > 1) cards[result.id] = {id: result.id, text: result.text};
     });
 
-    if (count == 1) fn({id: results[0].id, text: results[0].text });
+    if (count === 1) fn({id: results[0].id, text: results[0].text });
     else fn(cards);
 
     // Prevent the chosen cards from being reused
-    var sql = `INSERT INTO room_white_cards (card_id, room_id, user_id) VALUES `;
-    db.query(sql + cardsSql.join(", ") + ";", (err, results) => {
+    let sql = `INSERT INTO room_white_cards (card_id, room_id, user_id) VALUES `;
+    db.query(sql + cardsSql.join(", ") + ";", (err) => {
       if (err) return console.warn("Failed to mark white card as used:", err);
     });
   });

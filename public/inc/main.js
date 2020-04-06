@@ -468,8 +468,8 @@ socket.on("userLeft", data => {
   }
   if (data.message) addMessage(data.message);
   $("#user-" + data.userId).remove();
-  users[data.userId].roomId = null;
-})
+  users[data.userId].state = UserStates.inactive;
+});
 
 socket.on("roomSettings", data => {
   console.debug("Room has been set to " + data.edition + " edition!");
@@ -525,6 +525,7 @@ $("#set-username").submit(event => {
       user.name = userName;
       if (response.message) addMessage(response.message);
 
+      // TODO: check room state before assuming choosing phase
       users[userId].state = UserStates.choosing;
       addUser(users[userId]);
     });

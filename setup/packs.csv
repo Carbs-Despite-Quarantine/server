@@ -7,7 +7,6 @@ Prompt,A successful job interview begins with a firm handshake and ends with ___
 Prompt,"After months of practice with ______, I think I’m finally ready for ______.",PICK 2
 Prompt,"And I would have gotten away with it, too, if it hadn't been for ______!",
 Prompt,And what did you bring for show and tell?,
-Prompt,"As part of his contract, Prince won’t perform without ______ in his dressing room.",
 Prompt,"As part of his daily regimen, Anderson Cooper sets aside 15 minutes for ______.",
 Prompt,"Awww, sick! I just say this skater do a 720 kickflip into ______!",
 Prompt,"Before ______, all we had was ______.",PICK 2
@@ -418,7 +417,6 @@ Prompt,"This is America. If you don't work hard, you don't succeed. I don't care
 Prompt,"This is the prime of my life. I'm young, hot, and full of ______.",
 Prompt,"This year's hottest album is ""______"" by ______.",PICK 2
 Prompt,"To become a true Yanomami warrior, you must prove that you can withstand ______ without crying out.",
-Prompt,"To become a true Yanomamo warrior, you must prove that you can withstand ______ without crying out.",
 Prompt,"Tonight we will have sex. And afterwards, If you'd like, a little bit of ______.",
 Prompt,"We never did find ______, but along the way we sure learned a lot about ______.",PICK 2
 Prompt,"Well if ______ is good enough for ______, it's good enough for me.",PICK 2

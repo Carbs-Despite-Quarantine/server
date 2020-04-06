@@ -5,6 +5,7 @@ node_modules
 *.css.map
 
 prepros.config
+.idea/
 
 generated.sql
 setup/packs.js
