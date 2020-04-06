@@ -67,6 +67,7 @@ input[type=text] {
 	background-color: $contrastColor;
 }
 
+
 .card {
   height: $cardHeight * $cardScale;
   width: $cardWidth * $cardScale;
@@ -84,16 +85,6 @@ input[type=text] {
 	  background-color: white;
 	  color: black;
 	  border: solid 1px black;
-
-		&.ui-sortable-helper {
-			transform: scale(1.02) rotate(2deg);
-			z-index: 3;
-		}
-
-		&:hover {
-			transform: scale(1.02);
-			z-index: 3;
-		}
 	}
 
 	&.front {
@@ -120,12 +111,12 @@ input[type=text] {
 		.card-text::after {
 		  content: "Cards Against Quarantine";
 		  display: block;
-		  bottom: 0;
 		  position: absolute;
 		  font: 9px * $cardScale $font;
 		  font-weight: 700;
 		  padding-bottom: 28px * $cardScale;
 		  padding-left: 22px * $cardScale;
+		  bottom: 4px;
 		}
 
 		.special {
@@ -185,6 +176,19 @@ input[type=text] {
 		  padding: 18px * $cardScale 20px * $cardScale;
 		  padding-top: 30px * $cardScale;
 		  @include disable-selection;
+		}
+	}
+
+	&:hover {
+		z-index: 3;
+
+		&.white {
+		  border: solid 2px black;
+		}
+
+		&.ui-sortable-helper {
+			transform: rotate(2deg);
+			z-index: 3;
 		}
 	}
 }
@@ -285,7 +289,6 @@ input[type=text] {
 			}
 
 			.card-text::after {
-				display: none;
 
 				// TODO: fix jumpy bottom text during transition from hover;
 			  bottom: 112px;
@@ -298,11 +301,9 @@ input[type=text] {
 				}
 			}
 
+
 			&:hover {
-				transition: none;
-				.card-text::after {
-					bottom: 0;
-				}
+				margin: 9px;
 			}
 		}
 
@@ -317,6 +318,10 @@ input[type=text] {
 		@media only screen and (max-width: 1550px) {
 			.card {
 				margin: 5px;
+
+				&:hover {
+					margin: 4px;
+				}
 
 				&.selected-card {
 					margin: 4px;
@@ -349,12 +354,36 @@ input[type=text] {
 		transition: $resizeTransition;
 		transform: scale(1.5);
 
+		.card-text::after {
+			bottom: 0;
+		}
+
 		@media only screen and (max-width: $firstTransitionWidth) {
 			top: calc(45% - #{$cardHeight * $cardScale + 10px});
 		}
 
 		@media only screen and (max-height: 650px) {
 			transform: scale(1.25);
+		}
+
+		&.winner-shown {
+			display: flex;
+			left: 0;
+			width: 100%;
+			justify-content: center;
+			top: calc(45% - #{$cardHeight * $cardScale - 15px});
+
+			.card {
+				margin: 10px;
+
+				.card-text::after {
+					bottom: 10px;
+				}
+
+				&.white:hover {
+					border: 1px solid black;
+				}
+			}
 		}
 
 		&.responses-shown {
@@ -450,6 +479,7 @@ input[type=text] {
 			flex: 0 0 auto;
 			margin: 0 $cardSpacing;
 
+			/*
 			&:hover {
 				.card-text::after {
 					bottom: 0;
@@ -458,7 +488,7 @@ input[type=text] {
 
 			.card-text::after {
 			  bottom: 6px;
-			}
+			}*/
 
 			&.selected-card {
 				border: 2px solid $contrastColor;
@@ -960,10 +990,6 @@ input[type=text] {
 						font-weight: normal;
 						border: none;
 						outline: none;
-
-						&::hover {
-							background-color: green;
-						}
 					}
 				}
 			}

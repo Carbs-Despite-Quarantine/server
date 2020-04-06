@@ -59,7 +59,7 @@ function getUser(userId, requireRoom=false) {
 }
 
 function setUserState(userId, state) {
-  users[userId].state = state;
+  if (users.hasOwnProperty(userId)) users[userId].state = state;
   db.setUserState(userId, state);
 }
 
@@ -167,6 +167,7 @@ function finishJoinRoom(user, room, fn) {
       state: user.state
     };
     roomUserIds.push(user.id);
+    room.users = roomUserIds;
 
     db.getLatestMessages(room.id, 15, response => {
       if (response.error) {
@@ -197,6 +198,69 @@ function finishJoinRoom(user, room, fn) {
         room: room,
         users: roomUsers,
         iconChoices: getAvailableIcons(roomIcons)
+      });
+    });
+  });
+}
+
+function finishSelectResponse(user, roomUserInfo, cardId) {
+  db.query(`UPDATE rooms SET selected_response = ? WHERE id = ?;`,
+  [cardId, user.roomId], (err, result) => {
+    if (err) {
+      console.warn("Failed to update selected card for room #" + user.roomId);
+      return fn({error: "MySQL Error"});
+    }
+
+    roomUserInfo.userIds.forEach(roomUserId => {
+      if (!users.hasOwnProperty(roomUserId) || roomUserId == user.id) return;
+
+      users[roomUserId].socket.emit("selectResponse", {cardId: cardId});
+    });
+  });
+}
+
+function nextRound(roomId, czarId, roomUserInfo, fn) {
+  // Get a black card for the new round
+  db.getBlackCard(roomId, blackCard => {
+    if (blackCard.error) {
+      console.warn("Failed to get starting black card for room #" + roomId + ":", blackCard.error);
+      return fn(blackCard)
+    }
+
+    db.setRoomState(roomId, vars.RoomStates.choosingCards);
+    setUserState(czarId, vars.UserStates.czar);
+
+    db.query(`
+      UPDATE room_white_cards
+      SET state = ${vars.CardStates.played}
+      WHERE room_id = ? AND (state = ${vars.CardStates.selected} OR state = ${vars.CardStates.revealed});
+    `, [roomId], (err, results) => {
+      if (err) {
+        console.warn("Failed to maek cards as played when starting new round:", err);
+        return fn({error: "MySQL Error"});
+      }
+      db.query(`
+        UPDATE users
+        SET state = ${vars.UserStates.choosing}
+        WHERE room_id = ? AND NOT id = ?;
+      `, [roomId, czarId], (err, results) => {
+        if (err) {
+          console.warn("Failed to mark user states as choosingCards for next round:", err);
+          return fn({error: "MySQL Error"});
+        }
+
+        console.debug("Starting next round in room #" + roomId);
+        fn({});
+
+        roomUserInfo.userIds.forEach(roomUserId => {
+          if (!users.hasOwnProperty(roomUserId)) return;
+          if (roomUserId != czarId) users[roomUserId].state = vars.UserStates.choosing;
+
+          users[roomUserId].socket.emit("nextRound", {
+            card: blackCard,
+            czar: czarId
+          });
+        })
       });
     });
   });
@@ -422,7 +486,7 @@ function initSocket(socket, userId) {
       }
 
       db.createMessage(userId, "left the room", true, message => {
-          response.userIds.forEach(roomUserId => {
+        response.userIds.forEach(roomUserId => {
           if (!users.hasOwnProperty(roomUserId)) return;
           var socketUser = users[roomUserId];
 
@@ -438,6 +502,27 @@ function initSocket(socket, userId) {
 
         // Delete the room once all users have left
         if (activeUsers == 0) db.deleteRoom(user.roomId);
+        else if (user.state == vars.UserStates.czar) {
+          // If the czar leaves, we need to start a new round
+          var newCzarId = null;
+          for (var roomUserId in response.users) {
+            if (users.hasOwnProperty(roomUserId) && roomUserId != userId && users[roomUserId].roomId == user.roomId) {
+              newCzarId = roomUserId;
+              break;
+            }
+          }
+
+          if (newCzarId == null) {
+            console.warn("Failed to find a new czar for room #" + user.roomId);
+          } else {
+            console.warn("Czar left room #" + user.roomId + ", replacing with user #" + newCzarId);
+            nextRound(user.roomId, newCzarId, response, res => {
+              if (res.error) {
+                console.warn("Failed to start next round when czar left: ", res.error);
+              }
+            });
+          }
+        }
         user.roomId = null;
       });
     });
@@ -545,7 +630,6 @@ function initSocket(socket, userId) {
           setUserState(userId, vars.UserStates.idle);
 
           var cardCzar = null;
-          var activeUsers = 1;
 
           // Check if all users have submitted a card
           response.userIds.forEach(roomUserId => {
@@ -553,8 +637,6 @@ function initSocket(socket, userId) {
 
             var roomUser = response.users[roomUserId];
             var socketUser = users[roomUserId];
-
-            activeUsers++;
 
             if (roomUser.state == vars.UserStates.czar) {
               if (cardCzar) console.warn("Multiple czars were found in room #" + user.roomId + "!");
@@ -564,11 +646,27 @@ function initSocket(socket, userId) {
             socketUser.socket.emit("userState", {userId: userId, state: vars.UserStates.idle});
           });
 
-          // At least three players are required for a round
-          if (activeUsers > 2) {
-            if (!cardCzar) return console.warn("No czar was found for room #" + user.roomId);
-            cardCzar.socket.emit("answersReady");
-          }
+          // Check if we have recieved enough answers to start reading them
+          db.query(`
+            SELECT id
+            FROM white_cards
+            WHERE id IN (
+              SELECT card_id
+              FROM room_white_cards
+              WHERE room_id = ? AND state = ${vars.CardStates.selected}                
+            );
+          `, [user.roomId], (err, results, fields) => {
+            if (err) {
+              console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
+              return fn({error: "MySQL Error"});
+            }
+
+            if (results.length >= 2) {
+                      // At least three players are required for a round
+              if (!cardCzar) return console.warn("No czar was found for room #" + user.roomId + ", but answers are ready");
+              cardCzar.socket.emit("answersReady");
+            }
+          });
         });         
       });
     });
@@ -609,14 +707,27 @@ function initSocket(socket, userId) {
             return fn({error: "Not enough cards selected!"});
           }
 
-          fn({});
-          db.setRoomState(user.roomId, vars.RoomStates.readingCards);
+          var submissions = results.length;
 
-          response.userIds.forEach(roomUserId => {
-            if (!users.hasOwnProperty(roomUserId)) return;
+          db.query(`
+            UPDATE users 
+            SET state = ${vars.UserStates.idle}
+            WHERE room_id = ? AND NOT state = ${vars.UserStates.czar}
+          `, [user.roomId], (err, results) => {
+            if (err) {
+              console.warn("Failed to mark users as idle after starting response reading:", err);
+              return fn({error: "MySQL Error"});
+            }
 
-            users[roomUserId].socket.emit("startReadingAnswers", {
-              count: results.length
+            fn({});
+            db.setRoomState(user.roomId, vars.RoomStates.readingCards);
+
+            response.userIds.forEach(roomUserId => {
+              if (!users.hasOwnProperty(roomUserId)) return;
+              if (users[roomUserId].state != vars.UserStates.czar) users[roomUserId].state = vars.UserStates.idle;
+              users[roomUserId].socket.emit("startReadingAnswers", {
+                count: submissions
+              });
             });
           });
         });
@@ -688,7 +799,7 @@ function initSocket(socket, userId) {
   });
 
   socket.on("selectResponse", (data, fn) => {
-    if (data.cardId != null && !helpers.validateUInt(data.cardId)) return fn({error: "Invalid Card ID"});
+    if (data.cardId != null && !helpers.validateUInt(data.cardId)) return fn({error: "Card ID must be an int"});
     var user = getUser(userId, true);
     if (user.error) return fn(user);
     if (user.state != vars.UserStates.czar) {
@@ -717,21 +828,119 @@ function initSocket(socket, userId) {
     });
   });
 
-  function finishSelectResponse(user, roomUserInfo, cardId) {
-    db.query(`UPDATE rooms SET selected_response = ? WHERE id = ?;`,
-    [cardId, user.roomId], (err, result) => {
-      if (err) {
-        console.warn("Failed to update selected card for room #" + user.roomId);
-        return fn({error: "MySQL Error"});
-      }
+  // TODO: deduplication
+  socket.on("selectWinner", (data, fn) => {
+    if (!helpers.validateUInt(data.cardId)) return fn({error: "Invalid Card ID"});
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+    if (user.state != vars.UserStates.czar) {
+      console.warn("User #" + userId + " with state '" + user.state + "' tried to select a winning response!");
+      return fn({error: "Invalid User State"});
+    }
 
-      roomUserInfo.userIds.forEach(roomUserId => {
-        if (!users.hasOwnProperty(roomUserId) || roomUserId == userId) return;
+    db.getRoom(user.roomId, room => {
+      if (room.error) return fn(room);
+      if (room.state != vars.RoomStates.readingCards) return fn({error: "Invalid Room State"});
 
-        users[roomUserId].socket.emit("selectResponse", {cardId: cardId});
+      db.getRoomUsers(user.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get users when selecting winning card in room #" + user.roomId);
+          return fn(response);
+        } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+        db.getWhiteCardByID(data.cardId, winningCard => {
+          db.query(`
+            SELECT card_id, user_id
+            FROM room_white_cards
+            WHERE room_id = ? AND state = ${vars.CardStates.revealed}
+          `, [user.roomId], (err, results, fields) => {
+            if (err) {
+              console.warn("Failed to check room_white_cards for winning card:", err);
+              return fn({error: "MySQL Error"});
+            } else if (results.length == 0) {
+              return fn({error: "Invalid Room or State"});
+            }
+
+            var winnerId = null;
+
+            results.forEach(result => {
+              if (result.card_id == data.cardId) {
+                winnerId = result.user_id;
+              }
+            })
+
+            if (winnerId == null) {
+              console.warn("Winning card was not found in room_white_cards!");
+              return fn({error: "Invalid Card"});
+            }
+            
+            // Mark all revealed cards as played
+            db.query(`
+              UPDATE room_white_cards 
+              SET state = ${vars.CardStates.played} 
+              WHERE room_id = ? AND state = ${vars.CardStates.revealed};
+            `, [user.roomId], (err, result) => {
+              if (err) {
+                console.warn("Failed to mark cards as played:", err);
+                return fn({error: "MySQL Error"});
+              }
+
+              db.query(`
+                UPDATE users 
+                SET state = ${vars.UserStates.idle}
+                WHERE room_id = ? AND NOT id = ?;
+              `, [user.roomId, winnerId], (err, result) => {
+                if (err) {
+                  console.warn("Failed to mark all users in room #" + user.roomId+ " as idle:", err);
+                  return fn({error: "MySQL Error"});
+                }
+
+                if (users.hasOwnProperty(winnerId)) users[winnerId].score++;
+                db.setWinner(winnerId, response.users[winnerId].score + 1);
+                db.setRoomState(user.roomId, vars.RoomStates.viewingWinner);
+
+                users[winnerId].state = vars.UserStates.winner;
+
+                fn({});
+
+                response.userIds.forEach(roomUserId => {
+                  if (!users.hasOwnProperty(roomUserId)) return;
+
+                  users[roomUserId].socket.emit("selectWinner", {
+                    card: winningCard,
+                    userId: winnerId
+                  });
+                });
+              });
+            });
+          });
+        })
       });
     });
-  }
+  });
+
+  socket.on("nextRound", (data, fn) => {
+    var user = getUser(userId, true);
+    if (user.error) return fn(user);
+    if (user.state != vars.UserStates.winner) {
+      console.warn("User #" + userId + " with state '" + user.state + "' tried to start next round!");
+      return fn({error: "Invalid User State"});
+    }
+
+    db.getRoom(user.roomId, room => {
+      if (room.error) return fn(room);
+      if (room.state != vars.RoomStates.viewingWinner) return fn({error: "Invalid Room State"});
+
+      db.getRoomUsers(user.roomId, response => {
+        if (response.error) {
+          console.warn("Failed to get users when starting next round in room #" + user.roomId);
+          return fn(response);
+        } else if (response.userIds.length == 0) return fn({error: "Invalid Room"});
+
+        nextRound(user.roomId, userId, response, fn);
+      });
+    });
+  });
 
   /***************
    * Chat System *

@@ -6,13 +6,15 @@ const UserStates = Object.freeze({
   "idle": 1,
   "choosing": 2,
   "czar": 3,
-  "inactive": 4
+  "winner": 4,
+  "inactive": 5
 });
 
 const RoomStates = Object.freeze({
   "new": 1,
   "choosingCards": 2,
-  "readingCards": 3
+  "readingCards": 3,
+  "viewingWinner": 4
 });
 
 /********************
@@ -34,6 +36,12 @@ var copyLinkFadeTimer = null;
 
 // Used to track the expansions enabled in the room setup menu
 var expansionsSelected = [];
+
+// The ID of the currently selected white card
+var selectedCard = null;
+
+// Set to true while waiting for a server response from selectCard
+var submittingCard = false;
 
 /********************
  * Helper Functions *
@@ -215,7 +223,7 @@ function populateChat(messages) {
  *************/
 
 function getStateString(state) {
-  return state == UserStates.czar ? "Card Czar" : (state == UserStates.idle ? "Ready" : "Choosing...");
+  return state == UserStates.winner ? "Winner" : (state == UserStates.czar ? "Card Czar" : (state == UserStates.idle ? "Ready" : "Choosing..."));
 }
 
 function addUser(user) {
@@ -247,6 +255,7 @@ function setUserState(userId, state) {
 }
 
 function setUserScore(userId, score) {
+  users[userId].score = score;
   $("#user-score-" + userId).text(score);
 }
 
@@ -448,6 +457,7 @@ socket.on("init", data => {
 
 socket.on("userJoined", data => {
   users[data.user.id] = data.user;
+  room.users.push(data.user.id);
   if (data.message) addMessage(data.message);
   addUser(data.user);
 });
@@ -684,6 +694,10 @@ socket.on("startReadingAnswers", (data) => {
   room.state = RoomStates.readingCards;
   var isCzar = users[userId].state == UserStates.czar;
 
+  room.users.forEach(roomUserId => {
+    if (users[roomUserId].state != UserStates.czar) setUserState(roomUserId, UserStates.idle);
+  })
+
   $("#cur-black-card").addClass("responses-shown");
 
   for (var i = 0; i < data.count; i++) {
@@ -707,7 +721,7 @@ socket.on("revealResponse", (data) => {
 
       $("#select-winner").show();
       $("#cur-black-card").addClass("czar-mode");
-
+      console.debug("Selecting response #" + data.card.id);
       socket.emit("selectResponse", {cardId: data.card.id}, response => {
         if (response.error) return console.warn("Failed to select response:", response.error);
       });
@@ -720,21 +734,49 @@ socket.on("selectResponse", (data) => {
   if (data.cardId) $("#response-revealed-" + data.cardId).addClass("selected-card");
 });
 
+socket.on("selectWinner", (data) => {
+  setUserScore(data.userId, users[data.userId].score + 1);
+
+  room.users.forEach(roomUserId => {
+    setUserState(roomUserId, roomUserId == data.userId ? UserStates.winner : UserStates.idle);
+  });
+
+  room.state = RoomStates.viewingWinner;
+
+  $("#cur-black-card").removeClass("responses-shown").removeClass("czar-mode");
+  $("#select-winner").hide();
+  $("#response-cards").empty();
+  selectedCard = null;
+
+  $("#cur-black-card").addClass("winner-shown");
+  appendCard(data.card, $("#cur-black-card"));
+
+  // Show the 'next round' button if we are the winner
+  if (data.userId == userId) {
+    $("#central-action").show().text("Next Round");
+  }
+});
+
+socket.on("nextRound", (data) => {
+  room.state = RoomStates.choosingCards;
+  room.users.forEach(roomUserId => {
+    setUserState(roomUserId, roomUserId == data.czar ? UserStates.czar : UserStates.choosing);
+  })
+
+  $("#cur-black-card").removeClass("winner-shown");
+  if (data.card) setBlackCard(data.card);
+});
+
 /********************
  * Card Interaction *
  ********************/
 
-// The ID of the currently selected white card
-var selectedCard = null;
-
-// Set to true while waiting for a server response from selectCard
-var submittingCard = false;
 
 function appendCardBack(target, id, isWhite=true) {
   target.append(`
     <div class="card ${isWhite ? "white" : "black"} back" id="${id}">
-        <div class="card-text">Cards Against Quarantine</div>
-      </div>
+      <div class="card-text">Cards Against Quarantine</div>
+    </div>
   `);
 }
 
@@ -765,7 +807,7 @@ function appendCard(card, target, isWhite=true) {
       html += `"></div>`;
     }
   }
-  target.append(html + `<div class="card-text">${card.text}</div></div`);
+  target.append(html + `<div class="card-text">${card.text}</div></div>`);
 }
 
 // TODO: animate?
@@ -834,12 +876,25 @@ function submitCard() {
 
       if (response.newCard) addCardToDeck(response.newCard);
       setUserState(userId, UserStates.idle);
-    })
+    });
   }
 }
 
 $("#central-action").click(event => {
   var curState = users[userId].state;
+
+  // Go to the next round if 'Next Round' button is shown
+  if (room.state == RoomStates.viewingWinner) {
+    if (curState != UserStates.winner) {
+      return console.warn("Non-winner tried to start next round!");
+    }
+    socket.emit("nextRound", {}, response => {
+      if (response.error) return console.warn("Failed to start the next round:", response.error);
+      $("#central-action").hide();
+    });
+    return;
+  }
+
 
   if (curState == UserStates.czar) {
     socket.emit("startReadingAnswers", {}, response => {
@@ -850,3 +905,11 @@ $("#central-action").click(event => {
     submitCard();
   }
 });
+
+$("#select-winner").click(event => {
+  if (users[userId].state == UserStates.czar && selectedCard) {
+    socket.emit("selectWinner", {cardId: selectedCard}, response => {
+      if (response.error) return console.warn("Failed to select winning card:", response.error);
+    })
+  }
+})

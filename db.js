@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const helpers = require("./helpers");
+const vars = require("./vars");
 
 /**************
  * Connection *
@@ -47,6 +48,14 @@ exports.setUserState = (userId, state) => {
   [state, userId],(err, result) => {
     if (err) return console.warn("Failed to set state for user #" + userId + ":", err);
     console.debug("Set state for user #" + userId + " to '" + state + "'");
+  });
+};
+
+exports.setWinner = (userId, score) => {
+  db.query(`UPDATE users SET score = ?, state = ${vars.UserStates.winner} WHERE id = ?;`, 
+  [score, userId],(err, result) => {
+    if (err) return console.warn("Failed to set score for user #" + userId + ":", err);
+    console.debug("Set score for user #" + userId + " to '" + score + "'");
   });
 };
 
@@ -242,13 +251,15 @@ exports.createMessage = (userId, content, isSystemMsg, fn) => {
  *********/
 
 function getCardByID(id, black, fn) {
+  if (!helpers.validateUInt(id)) return fn({error: "Card ID must be an int"});
   var color = black ? "black" : "white";
-  db.query(`SELECT * FROM ${color}_cards WHERE id = ?`, 
+  db.query(`SELECT * FROM ${color}_cards WHERE id = ?;`, 
   [id], (err, results, fields) => {
     if (err) {
       console.warn("Failed to get " + color + " card #" + id + ":" + err);
       return fn({error: "MySQL Error"});
     } else if (results.length == 0) {
+      console.warn("Didn't find " + color + " card id with #" + id);
       return fn({error: "Invalid Card ID"});
     }
     return fn(results[0]);
@@ -354,7 +365,7 @@ exports.getWhiteCards = (roomId, userId, count, fn) => {
 };
 
 exports.getWhiteCardByID = (id, fn) => {
-  getCardByID(id, true, card => {
+  getCardByID(id, false, card => {
     if (card.error) return fn(card);
     fn({
       id: card.id,

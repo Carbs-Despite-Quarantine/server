@@ -11,13 +11,15 @@ exports.UserStates = Object.freeze({
   "idle": 1,          // The user is idle
   "choosing": 2,      // The user is selecting a white card
   "czar": 3,          // The user is the card czar
-  "inactive": 4       // The user has left their game
+  "winner": 4,        // The user won the most recent round
+  "inactive": 5       // The user has left their game
 });
 
 exports.RoomStates = Object.freeze({
   "new": 1,           // The room has been created but not set up
   "choosingCards": 2, // Players are chosing responses
-  "readingCards": 3   // The czar is reading responses
+  "readingCards": 3,  // The czar is reading responses
+  "viewingWinner": 4  // A winner has been selected and the next round will begin soon
 });
 
 exports.CardStates = Object.freeze({
