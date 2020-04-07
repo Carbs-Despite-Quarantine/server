@@ -57,7 +57,7 @@ input[type=text] {
 	&.invalid {
 		border-color: red;
 
-		&::-webkit-input-placeholder, &:-ms-input-placeholde, &:-moz-placeholder, &::placeholder {
+		&::-webkit-input-placeholder, &:-ms-input-placeholder, &:-moz-placeholder, &::placeholder {
 			color: red;
 		}
 	}

@@ -21,7 +21,7 @@ const RoomStates = Object.freeze({
  * Global Variables *
  ********************/
 
-var socket = io("http://localhost:3000");
+const socket = io("http://localhost:3000");
 
 var userId;
 
@@ -43,12 +43,15 @@ var selectedCard = null;
 // Set to true while waiting for a server response from selectCard
 var submittingCard = false;
 
+// jQuery element cache
+const setupSpinner = $("#setup-spinner");
+
 /********************
  * Helper Functions *
  ********************/
 
 function getURLParam(name){
-  var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+  let results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
   return results && results[1] || null;
 }
 
@@ -84,7 +87,7 @@ function clearLikesDiv(likesDiv, msgId) {
     </div>
   `);
 
-  var message = room.messages[msgId];
+  let message = room.messages[msgId];
 
   // Listen for clicks on the heart icon
   likesDiv.children(".msg-heart").first().click(event => {
@@ -103,19 +106,19 @@ function clearLikesDiv(likesDiv, msgId) {
 }
 
 function getOrCreateLikesDiv(msgId) {
-  var msgDiv = $("#msg-" + msgId);
-  if (msgDiv.length == 0) {
+  let msgDiv = $("#msg-" + msgId);
+  if (msgDiv.length === 0) {
     console.warn("Tried to create like div for invalid msg #", msgId);
     return null;
   }
 
-  var contentDiv = msgDiv.first().children(".msg-content");
-  if (contentDiv.length == 0) {
+  let contentDiv = msgDiv.first().children(".msg-content");
+  if (contentDiv.length === 0) {
     console.warn("Failed to get content div for msg #" + msgId);
     return null;
   }
 
-  var likesDiv = contentDiv.children(".msg-likes");
+  let likesDiv = contentDiv.children(".msg-likes");
   if (likesDiv.length > 0) {
     return likesDiv.first();
   }
@@ -131,12 +134,12 @@ function addLikes(msgId, userIds, addToMessage=true) {
     console.warn("Tried to add likes to untracked message #", msgId);
     return;
   }
-  var likesDiv = getOrCreateLikesDiv(msgId);
+  let likesDiv = getOrCreateLikesDiv(msgId);
   if (!likesDiv) {
     console.warn("Failed to add likes to message #", msgId);
     return;
   }
-  var message = room.messages[msgId];
+  let message = room.messages[msgId];
   userIds.forEach(likeId => {
     if (!users.hasOwnProperty(likeId)) {
       return console.warn("Recieved like from invalid user #" + likeId);
@@ -144,14 +147,14 @@ function addLikes(msgId, userIds, addToMessage=true) {
       return console.warn("User #" + likeId + " tried to like message #" + msgId + " twice!");
     }
     if (addToMessage) message.likes.push(likeId);
-    if (likeId == userId) {
-      var heart = likesDiv.children(".msg-heart").first().children("i").first();
+    if (likeId === userId) {
+      let heart = likesDiv.children(".msg-heart").first().children("i").first();
 
       // Replace the empty heart with a full heart
       heart.removeClass("far");
       heart.addClass("fas");
     }
-    var user = users[likeId];
+    let user = users[likeId];
     likesDiv.append(`
       <div class="msg-like">
         <i class="fas fa-${user.icon}" title="Liked by ${user.name}"></i>
@@ -166,16 +169,16 @@ function removeLike(msgId, userId) {
     console.warn("Tried to remove a like from untracked message #", msgId);
     return;
   }
-  var likesDiv = getOrCreateLikesDiv(msgId);
+  let likesDiv = getOrCreateLikesDiv(msgId);
   if (!likesDiv) {
     console.warn("Failed to remove a like from message #", msgId);
   }
-  var message = room.messages[msgId];
-  var likeIndex = message.likes.indexOf(userId);
+  let message = room.messages[msgId];
+  let likeIndex = message.likes.indexOf(userId);
   if (likeIndex > -1) message.likes.splice(likeIndex, 1);
 
   // Simply delete the likes div if this was the last like
-  if (Object.keys(message.likes).length == 0) {
+  if (Object.keys(message.likes).length === 0) {
     likesDiv.remove();
     return;
   }
@@ -213,7 +216,7 @@ function addMessage(message, addToRoom=true) {
 }
 
 function populateChat(messages) {
-  for (var msgId in messages) {
+  for (let msgId in messages) {
     addMessage(messages[msgId], false);
   }
 }
@@ -223,7 +226,18 @@ function populateChat(messages) {
  *************/
 
 function getStateString(state) {
-  return state == UserStates.winner ? "Winner" : (state == UserStates.czar ? "Card Czar" : (state == UserStates.idle ? "Ready" : "Choosing..."));
+  switch(state) {
+    case UserStates.winner:
+      return "Winner";
+    case UserStates.czar:
+      return "Card Czar";
+    case UserStates.idle:
+      return "Ready";
+    case UserStates.choosing:
+      return "Choosing";
+    case UserStates.inactive:
+      return "Inactive";
+  }
 }
 
 function addUser(user) {
@@ -244,7 +258,7 @@ function addUser(user) {
 }
 
 function populateUserList(users) {
-  for (var user in users) {
+  for (let user in users) {
     if (users[user].icon && users[user].name) addUser(users[user]);
   }
 }
@@ -272,10 +286,10 @@ function addExpansionSelector(id, name) {
   
   // Clicking an expansion will toggle it
   $("#expansion-" + id).click(event => {
-    var target = $("#expansion-" + id);
+    let target = $("#expansion-" + id);
     if (target.hasClass("selected")) {
       target.removeClass("selected");
-      var expansionIndex = expansionsSelected.indexOf(id);
+      let expansionIndex = expansionsSelected.indexOf(id);
       if (expansionIndex > -1) expansionsSelected.splice(expansionIndex, 1);
     } else {
       target.addClass("selected");
@@ -300,12 +314,12 @@ function setIcon() {
   if (!selectedIcon || !userId) return;
 
  $("#select-icon").hide();
- $("#setup-spinner").show();
+ setupSpinner.show();
   
   socket.emit("setIcon", {
     icon: selectedIcon
   }, response => {
-    $("#setup-spinner").hide();
+    setupSpinner.hide();
     if (response.error) {
       console.error("Failed to set icon:", response.error);
       $("#select-icon").show();
@@ -323,9 +337,9 @@ function addIcon(name) {
     </div>
   `);
   // Add a click listener to select the icon
-  var element = $("#icon-" + name);
+  let element = $("#icon-" + name);
   element.click(event => {
-    var curName = element.attr("id").match(/icon-(.*)/)[1];
+    let curName = element.attr("id").match(/icon-(.*)/)[1];
 
     $(".icon").removeClass("selected");
     element.addClass("selected");
@@ -344,11 +358,11 @@ function populateIconSelector(icons) {
   availableIcons = icons;
   iconChoices = [];
 
-  var maxIcons = 14;
+  let maxIcons = 14;
   if (maxIcons > icons.length) maxIcons = icons.length;
 
   while (iconChoices.length < maxIcons) {
-    var icon = icons[Math.floor(Math.random() * icons.length)];
+    let icon = icons[Math.floor(Math.random() * icons.length)];
     if (iconChoices.includes(icon)) continue;
 
     iconChoices.push(icon);
@@ -363,7 +377,7 @@ $("#set-icon").click(event => {
 });
 
 socket.on("iconTaken", event => {
-  var iconIndex = availableIcons.indexOf(event.icon);
+  let iconIndex = availableIcons.indexOf(event.icon);
   if (iconIndex > -1) availableIcons.splice(iconIndex, 1);
 
   iconIndex = iconChoices.indexOf(event.icon);
@@ -374,7 +388,7 @@ socket.on("iconTaken", event => {
     $("#set-icon").prop("disabled", true);
   }
 
-  var iconElement = $("#icon-" + event.icon);
+  let iconElement = $("#icon-" + event.icon);
   if (iconElement.length > 0) {
     // If there are no excess avaiable items, simply hide the icon
     if (iconChoices.length >= availableIcons.length) {
@@ -383,7 +397,7 @@ socket.on("iconTaken", event => {
     }
 
     // Find a new icon to replace it
-    var newIcon;
+    let newIcon;
     while (!newIcon || iconChoices.includes(newIcon)) {
       newIcon = availableIcons[Math.floor(Math.random() * availableIcons.length)];
     }
@@ -392,7 +406,7 @@ socket.on("iconTaken", event => {
     iconElement.removeClass("selected");
 
     // Replace the font awesome icon class
-    var faElement = iconElement.children("i");
+    let faElement = iconElement.children("i");
     faElement.removeClass("fa-" + event.icon);
     faElement.addClass("fa-" + newIcon);
   }
@@ -407,8 +421,8 @@ socket.on("init", data => {
   console.debug("Obtained userId " + data.userId);
   userId = data.userId;
 
-  var roomId = parseInt(getURLParam("room"));
-  var roomToken = getURLParam("token");
+  let roomId = parseInt(getURLParam("room"));
+  let roomToken = getURLParam("token");
 
   users[userId] = {
     id: userId,
@@ -429,7 +443,7 @@ socket.on("init", data => {
     }, response => {
       if (response.error) {
         console.warn("Failed to join room #" + roomId + ":", response.error);
-        $("#setup-spinner").hide();
+        setupSpinner.hide();
         resetRoomMenu();
         populateIconSelector(data.icons);
         return;
@@ -447,11 +461,11 @@ socket.on("init", data => {
 
       if (room.curPrompt) setBlackCard(room.curPrompt);
 
-      $("#setup-spinner").hide();
+      setupSpinner.hide();
     });
   } else {
     populateIconSelector(data.icons);
-    $("#setup-spinner").hide();
+    setupSpinner.hide();
   }
 });
 
@@ -467,8 +481,7 @@ socket.on("userLeft", data => {
     return console.error("Recieved leave message for unknown user #" + data.userId);
   }
   if (data.message) addMessage(data.message);
-  $("#user-" + data.userId).remove();
-  users[data.userId].state = UserStates.inactive;
+  setUserState(data.userId, UserStates.inactive);
 });
 
 socket.on("roomSettings", data => {
@@ -489,18 +502,18 @@ window.addEventListener("beforeunload", (event) => {
  **************/
 
 $("#username-input").keyup(event => {
-  var userName = $("#username-input").val().replace(/^\s+|\s+$/g, "");
-  $("#set-username-submit").prop("disabled", userName.length == 0);
+  let userName = $("#username-input").val().replace(/^\s+|\s+$/g, "");
+  $("#set-username-submit").prop("disabled", userName.length === 0);
 });
 
 $("#set-username").submit(event => {
   event.preventDefault();
 
-  var user = users[userId];
-  var userName = $("#username-input").val();
+  let user = users[userId];
+  let userName = $("#username-input").val();
 
   $("#set-username").hide();
-  $("#setup-spinner").show();
+  setupSpinner.show();
 
   // If the user is already in a room, enter it
   if (room) {
@@ -509,7 +522,7 @@ $("#set-username").submit(event => {
       roomId: user.roomId,
       userName: userName
     }, response => {
-      $("#setup-spinner").hide();
+      setupSpinner.hide();
 
       if (response.error) {
         console.error("Failed to join room #" + user.roomId + ":", response.error);
@@ -535,7 +548,7 @@ $("#set-username").submit(event => {
       userName: userName
     }, response => {
       if (response.error) {
-        $("#setup-spinner").hide();
+        setupSpinner.hide();
         $("#set-username").show();
         return console.error("Failed to create room:", response.error);
       }
@@ -546,15 +559,15 @@ $("#set-username").submit(event => {
       user.state = UserStates.czar;
 
       // Clear and cache the edition menu in order to re-populate it
-      var editionMenu = $("#select-edition");
+      let editionMenu = $("#select-edition");
       editionMenu.empty();
 
       // Populate the edition selection menu
-      for (var edition in response.editions) {
+      for (let edition in response.editions) {
         editionMenu.append(`<option value="${edition}">${response.editions[edition]}</option>`);
       }
 
-      for (var pack in response.packs) {
+      for (let pack in response.packs) {
         addExpansionSelector(pack, response.packs[pack]);
       }
 
@@ -569,34 +582,34 @@ $("#set-username").submit(event => {
       populateChat(room.messages);
       populateUserList(users);
 
-      $("#setup-spinner").hide();
+      setupSpinner.hide();
     });
   }
 });
 
-$("#start-game").click(event => {
+$("#start-game").click(() => {
   if (!room || !room.users) return console.error("Attempted to start game without a room ID");
 
   console.debug("Starting game...");
 
   $("#room-setup-window").hide();
   $("#user-setup-window").show();
-  $("#setup-spinner").show();
+  setupSpinner.show();
 
-  var title = $("#settings-title");
+  let title = $("#settings-title");
   title.children("h1").text("Configuring Room...");
   title.children("p").text("Please wait a second.");
   title.show();
 
-  var edition = $("#select-edition").val();
-  var rotateCzar = $("#select-czar").val() == "rotate";
+  let edition = $("#select-edition").val();
+  let rotateCzar = $("#select-czar").val() == "rotate";
 
   socket.emit("roomSettings", {
     edition: edition,
     rotateCzar: rotateCzar,
     packs: expansionsSelected
   }, response => {
-    $("#setup-spinner").hide();
+    setupSpinner.hide();
 
     if (response.error) {
       $("#room-setup-window").show()
@@ -610,12 +623,12 @@ $("#start-game").click(event => {
   });
 });
 
-$("#room-link").click(event => {
+$("#room-link").click(() => {
   if (!room.link) return console.warn("Not in a room!");
 
   // Actually copy the link
   $("body").append(`<textarea id="fake-for-copy" readonly>${room.link}</textarea>`);
-  var fake = $("#fake-for-copy")[0];
+  let fake = $("#fake-for-copy")[0];
   fake.select();
   document.execCommand("copy");
   fake.remove();
@@ -642,10 +655,10 @@ $("#room-link").click(event => {
 $("#chat-input").keyup(event => {
   event.stopPropagation();
 
-  var content = $("#chat-input").val().replace(/^\s+|\s+$/g, "");
+  let content = $("#chat-input").val().replace(/^\s+|\s+$/g, "");
 
   // 13 is the keycode for enter
-  if (content.length > 0 && event.which == 13) {
+  if (content.length > 0 && event.which === 13) {
     socket.emit("chatMessage", {
       content: content
     }, response => {
@@ -687,32 +700,32 @@ socket.on("userState", data => {
 });
 
 socket.on("answersReady", () => {
-  if (users[userId].state != UserStates.czar) return console.warn("Recieved answersReady state despite not being czar!");
+  if (users[userId].state !== UserStates.czar) return console.warn("Recieved answersReady state despite not being czar!");
   $("#central-action").show().text("Read Answers");
 });
 
 socket.on("startReadingAnswers", (data) => {
   room.state = RoomStates.readingCards;
-  var isCzar = users[userId].state == UserStates.czar;
+  let isCzar = users[userId].state === UserStates.czar;
 
   room.users.forEach(roomUserId => {
-    if (users[roomUserId].state != UserStates.czar) setUserState(roomUserId, UserStates.idle);
-  })
+    if (users[roomUserId].state === UserStates.choosing) setUserState(roomUserId, UserStates.idle);
+  });
 
   $("#cur-black-card").addClass("responses-shown");
 
-  for (var i = 0; i < data.count; i++) {
+  for (let i = 0; i < data.count; i++) {
     addResponseCard(i, isCzar);
   }
 });
 
 socket.on("revealResponse", (data) => {
-  var cardElement = $("#response-card-" + data.position);
+  let cardElement = $("#response-card-" + data.position);
   cardElement.removeClass("back").addClass("front");
   cardElement.children(".card-text").text(data.card.text);
   cardElement.attr("id", "response-revealed-" + data.card.id);
 
-  if (users[userId].state == UserStates.czar) {
+  if (users[userId].state === UserStates.czar) {
     $("#response-revealed-" + data.card.id).off("click").on("click", event => {
       if (selectedCard) {
         $("#response-revealed-" + selectedCard).removeClass("selected-card");
@@ -739,7 +752,8 @@ socket.on("selectWinner", (data) => {
   setUserScore(data.userId, users[data.userId].score + 1);
 
   room.users.forEach(roomUserId => {
-    setUserState(roomUserId, roomUserId == data.userId ? UserStates.winner : UserStates.idle);
+    if (users[roomUserId].state === UserStates.inactive) return;
+    setUserState(roomUserId, roomUserId === data.userId ? UserStates.winner : UserStates.idle);
   });
 
   room.state = RoomStates.viewingWinner;
@@ -753,7 +767,7 @@ socket.on("selectWinner", (data) => {
   appendCard(data.card, $("#cur-black-card"));
 
   // Show the 'next round' button if we are the winner
-  if (data.userId == userId) {
+  if (data.userId === userId) {
     $("#central-action").show().text("Next Round");
   }
 });
@@ -761,7 +775,8 @@ socket.on("selectWinner", (data) => {
 socket.on("nextRound", (data) => {
   room.state = RoomStates.choosingCards;
   room.users.forEach(roomUserId => {
-    setUserState(roomUserId, roomUserId == data.czar ? UserStates.czar : UserStates.choosing);
+    if (users[roomUserId].state === UserStates.inactive) return;
+    setUserState(roomUserId, roomUserId === data.czar ? UserStates.czar : UserStates.choosing);
   })
 
   $("#cur-black-card").removeClass("winner-shown");
@@ -795,13 +810,13 @@ function addResponseCard(id, isCzar) {
 }
 
 function appendCard(card, target, isWhite=true) {
-  var color = isWhite ? "white" : "black";
-  var id = color + "-card-" + card.id;
-  var html = `<div class="card ${color} front" id="${id}">`;
+  let color = isWhite ? "white" : "black";
+  let id = color + "-card-" + card.id;
+  let html = `<div class="card ${color} front" id="${id}">`;
   if (card.draw || card.pick) {
-    if (card.draw == 2) html += `<div class="special draw"></div>`;
+    if (card.draw === 2) html += `<div class="special draw"></div>`;
 
-    var pick = card.pick;
+    let pick = card.pick;
     if (pick > 1) {
       html += `<div class="special pick`;
       if (pick > 2) html += " pick-three";
@@ -814,9 +829,9 @@ function appendCard(card, target, isWhite=true) {
 // TODO: animate?
 function addCardToDeck(card) {
   appendCard(card, $("#hand"));
-  var cardElement = $("#white-card-" + card.id);
-  cardElement.click(event => {
-    if (users[userId].state != UserStates.choosing || submittingCard) return;
+  let cardElement = $("#white-card-" + card.id);
+  cardElement.click(() => {
+    if (users[userId].state !== UserStates.choosing || submittingCard) return;
     if (selectedCard) {
       $("#white-card-" + selectedCard).removeClass("selected-card");
     }
@@ -827,7 +842,7 @@ function addCardToDeck(card) {
 }
 
 function addCardsToDeck(newCards) {
-  for (var cardId in newCards) {
+  for (let cardId in newCards) {
     addCardToDeck(newCards[cardId]);
   }
 }
@@ -847,7 +862,7 @@ $("#game-wrapper").click(event => {
     $("#response-revealed-" + selectedCard).removeClass("selected-card");
     selectedCard = null;
 
-    if (room.state == RoomStates.readingCards) {
+    if (room.state === RoomStates.readingCards) {
       $("#select-winner").hide();
       $("#cur-black-card").removeClass("czar-mode");
       socket.emit("selectResponse", {cardId: null}, response => {
@@ -863,7 +878,7 @@ function submitCard() {
   $("#central-action").hide();
   if (selectedCard && !submittingCard) {
     submittingCard = true;
-    var cardId = selectedCard;
+    let cardId = selectedCard;
     socket.emit("submitCard", {
       cardId: cardId
     }, response => {
@@ -881,12 +896,12 @@ function submitCard() {
   }
 }
 
-$("#central-action").click(event => {
-  var curState = users[userId].state;
+$("#central-action").click(() => {
+  let curState = users[userId].state;
 
   // Go to the next round if 'Next Round' button is shown
-  if (room.state == RoomStates.viewingWinner) {
-    if (curState != UserStates.winner) {
+  if (room.state === RoomStates.viewingWinner) {
+    if (curState !== UserStates.winner) {
       return console.warn("Non-winner tried to start next round!");
     }
     socket.emit("nextRound", {}, response => {
@@ -897,20 +912,20 @@ $("#central-action").click(event => {
   }
 
 
-  if (curState == UserStates.czar) {
+  if (curState === UserStates.czar) {
     socket.emit("startReadingAnswers", {}, response => {
       if (response.error) return console.warn("Failed to start reading answers:", response.error);
       $("#central-action").hide();
     });
-  } else if (curState == UserStates.choosing) {
+  } else if (curState === UserStates.choosing) {
     submitCard();
   }
 });
 
-$("#select-winner").click(event => {
-  if (users[userId].state == UserStates.czar && selectedCard) {
+$("#select-winner").click(() => {
+  if (users[userId].state === UserStates.czar && selectedCard) {
     socket.emit("selectWinner", {cardId: selectedCard}, response => {
       if (response.error) return console.warn("Failed to select winning card:", response.error);
     })
   }
-})
+});

@@ -2,10 +2,10 @@
   "name": "cah-server",
   "version": "1.0.0",
   "description": "Play Cards Against Humanity over the internet!",
-  "main": "index.js",
+  "main": "code/index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "node index.js --test"
+    "start": "node code/index.js",
+    "test": "node code/index.js --test"
   },
   "repository": {
     "type": "git",

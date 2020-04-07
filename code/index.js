@@ -479,7 +479,7 @@ function initSocket(socket, userId) {
     });
   });
 
-  socket.on("userLeft", data => {
+  socket.on("userLeft", () => {
     getRoomUser(userId, user => {
       // Delete the user if they weren't in a room
       if (user.error) return db.deleteUser(userId);
@@ -498,6 +498,13 @@ function initSocket(socket, userId) {
           return;
         }
 
+        // TODO: cancel round if not enough cards left ? Inform czar of leave?
+        db.query(`
+          DELETE FROM room_white_cards WHERE user_id = ? AND state = ${vars.CardStates.selected}
+         `, [userId], (err) => {
+          if (err) console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
+        });
+
         db.createMessage(userId, "left the room", true, message => {
           // Delete the room once all users have left
           if (countActiveUsersOnLeave(userId, roomInfo, message) === 0) db.deleteRoom(user.roomId);
@@ -506,7 +513,9 @@ function initSocket(socket, userId) {
             let newCzarId = null;
 
             for (let roomUserId in roomInfo.users) {
-              if (roomUserId !== userId && roomInfo.users[roomUserId].state !== vars.UserStates.inactive) {
+              let roomUser = roomInfo.users[roomUserId];
+              let userState = roomUser.state;
+              if (roomUserId !== userId && userState !== vars.UserStates.inactive && roomUser.name && roomUser.icon) {
                 newCzarId = roomUserId;
                 break;
               }
@@ -558,7 +567,7 @@ function initSocket(socket, userId) {
               rotateCzar,
               vars.RoomStates.choosingCards,
               user.roomId
-            ], (err, result) => {
+            ], (err) => {
               if (err) {
                 console.warn("Failed to apply room settings:", err);
                 return fn({error: "MySQL Error"});
