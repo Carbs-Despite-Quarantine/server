@@ -4,7 +4,9 @@
   "description": "Play Cards Against Humanity over the internet!",
   "main": "code/index.ts",
   "scripts": {
-    "tsc": "tsc"
+    "tsc": "tsc",
+    "dev": "ts-node-dev --respawn --transpileOnly ./src/index.ts",
+    "prod": "tsc && node ./build/index.js"
   },
   "repository": {
     "type": "git",
@@ -17,12 +19,13 @@
   },
   "homepage": "https://github.com/raphydaphy/cah-server#readme",
   "dependencies": {
-    "express": "4.17.1",
     "@types/express": "^4.17.4",
-    "mysql": "2.18.1",
     "@types/mysql": "^2.15.9",
-    "socket.io": "2.3.0",
     "@types/socket.io": "^2.1.4",
+    "express": "4.17.1",
+    "mysql": "2.18.1",
+    "socket.io": "2.3.0",
+    "ts-node-dev": "^1.0.0-pre.44",
     "typescript": "^3.8.3"
   }
 }

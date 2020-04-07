@@ -1,12 +1,5 @@
 node_modules/
 build/
 
-.sass-cache/
-*.css
-*.css.map
-
-prepros.config
-.idea/
-
 generated.sql
 setup/packs.js

@@ -1,5 +1,4 @@
 import express = require("express");
-import path = require("path");
 import sio = require("socket.io");
 
 const app: express.Application = express();
@@ -17,14 +16,6 @@ const sockets: Record<number, sio.Socket> = {};
 /*****************
  * Web Endpoints *
  *****************/
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/index.html"));
-});
-
-app.get("/inc/*", function(req, res) {
-  res.sendFile(path.join(__dirname, "../public/", req.path));
-});
 
 app.get("/status", (req, res) => {
   res.setHeader("Content-Type", "text/plain");
