@@ -773,6 +773,7 @@ socket.on("selectWinner", (data) => {
 });
 
 socket.on("nextRound", (data) => {
+  console.debug("Starting next round with user #" + data.czar + " as the card czar", room, data);
   room.state = RoomStates.choosingCards;
   room.users.forEach(roomUserId => {
     if (users[roomUserId].state === UserStates.inactive) return;
