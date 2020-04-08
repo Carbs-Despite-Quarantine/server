@@ -2,19 +2,19 @@
  * Data Validation *
  *******************/
 
-exports.validateHash = (hash, length) => {
+export function validateHash(hash: any, length: number): boolean {
   return typeof hash === "string" && hash.length === length;
 }
 
-exports.validateUInt = (uint) => {
+export function validateUInt(uint: any) {
   return typeof uint === "number" && uint % 1 === 0 && uint >= 0;
 }
 
-exports.validateBoolean = (boolean) => {
+export function validateBoolean(boolean: any) {
   return typeof boolean === "boolean";
 }
 
-exports.validateString = (string) => {
+export function validateString(string: any) {
   return typeof string === "string" && string.length > 0;
 }
 
@@ -23,16 +23,16 @@ exports.validateString = (string) => {
  *******************/
 
 // generate a random hash
-exports.makeHash = (length) => {
-  var result = "";
-  var hexChars = "0123456789abcdefghijklmnopqrstuvwxyz";
-  for (var i = 0; i < length; i += 1) {
+export function makeHash(length: number) {
+  let result = "";
+  let hexChars = "0123456789abcdefghijklmnopqrstuvwxyz";
+  for (let i = 0; i < length; i += 1) {
     result += hexChars[Math.floor(Math.random() * hexChars.length)];
   }
   return result;
 }
 
 // Replace </> characters with 'safe' encoded counterparts
-exports.stripHTML = (string) => {
+export function stripHTML(string: string) {
   return string.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

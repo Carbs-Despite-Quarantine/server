@@ -2,10 +2,11 @@
   "name": "cah-server",
   "version": "1.0.0",
   "description": "Play Cards Against Humanity over the internet!",
-  "main": "code/index.js",
+  "main": "code/index.ts",
   "scripts": {
-    "start": "node code/index.js",
-    "test": "node code/index.js --test"
+    "tsc": "tsc",
+    "dev": "ts-node-dev --respawn --transpileOnly ./src/index.ts",
+    "prod": "tsc && node ./build/index.js"
   },
   "repository": {
     "type": "git",
@@ -18,8 +19,13 @@
   },
   "homepage": "https://github.com/raphydaphy/cah-server#readme",
   "dependencies": {
+    "@types/express": "^4.17.4",
+    "@types/mysql": "^2.15.9",
+    "@types/socket.io": "^2.1.4",
     "express": "4.17.1",
+    "mysql": "2.18.1",
     "socket.io": "2.3.0",
-    "mysql": "2.18.1"
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^3.8.3"
   }
 }
