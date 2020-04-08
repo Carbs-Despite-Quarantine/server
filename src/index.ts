@@ -80,8 +80,25 @@ function countActiveUsersOnLeave(userId: number, roomUsers: Record<number, RoomU
       }
     }
   }
-
   return activeUsers;
+}
+
+function broadcastMessage(msg: Message, roomId: number, except?: number) {
+  db.getRoomUsers(roomId, (err, roomUsers) => {
+    if (err || !roomUsers) return console.warn("Failed to get users for room #" + roomId);
+
+    for (const roomUserId in roomUsers) {
+      let roomUser = roomUsers[roomUserId];
+
+      let socket = getSocket(roomUser.id);
+      if (!socket || roomUser.id === except) continue;
+
+      // Send the message to other active users
+      if (roomUser.state !== UserState.inactive) {
+        socket.emit("chatMessage", {message: msg});
+      }
+    }
+  });
 }
 
 /********************
@@ -478,11 +495,25 @@ function initSocket(socket: sio.Socket, userId: number) {
           return;
         }
 
-        // TODO: cancel round if not enough cards left ? Inform czar of leave?
+        // TODO: what if user leaves after responses are revealed?
         db.con.query(`
           DELETE FROM room_white_cards WHERE user_id = ? AND state = ${CardState.selected}
-         `, [userId], (err) => {
-          if (err) console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
+         `, [userId], (err, results) => {
+          if (err) return console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
+          else if (results.affectedRows > 0) {
+            db.countSubmittedCards(user.roomId, (err, count) => {
+              if (err || !count) return;
+              if (count == 1) {
+                for (const roomUserId in roomUsers) {
+                  let roomUser = roomUsers[roomUserId];
+                  let socket = getSocket(roomUser.id);
+
+                  // There is only one answer left, we can't read them now
+                  if (socket && roomUser.state === UserState.czar) socket.emit("answersNotReady");
+                }
+              }
+            });
+          }
         });
 
         db.createMessage(userId, "left the room", true, (err, msg) => {
@@ -507,7 +538,13 @@ function initSocket(socket: sio.Socket, userId: number) {
             } else {
               console.log("Czar left room #" + user.roomId + ", replacing with user #" + newCzarId);
               nextRound(user.roomId, newCzarId, roomUsers, res => {
-                if (res.error) console.warn("Failed to start next round when czar left: ", res.error);
+                if (res.error) return console.warn("Failed to start next round when czar left: ", res.error);
+                db.createMessage(newCzarId as number,
+                  "took over from " + user.name + " as the Card Czar", true,
+                (err, msg) => {
+                  if (err || !msg) return console.warn("Failed to broadcast new czar message:", err);
+                  broadcastMessage(msg, user.roomId);
+                })
               });
             }
           }
@@ -635,22 +672,9 @@ function initSocket(socket: sio.Socket, userId: number) {
               socket.emit("userState", {userId: userId, state: UserState.idle});
             }
 
-            // Check if we have received enough answers to start reading them
-            db.con.query(`
-              SELECT id
-              FROM white_cards
-              WHERE id IN (
-                SELECT card_id
-                FROM room_white_cards
-                WHERE room_id = ? AND state = ${CardState.selected}                
-              );
-            `, [user.roomId], (err, results) => {
-              if (err) {
-                console.warn(`Failed to get selected cards for room #${user.roomId}:`, err);
-                return fn({error: "MySQL Error"});
-              }
-
-              if (results.length >= 2) {
+            db.countSubmittedCards(user.roomId, (err, count) => {
+              if (err || !count) return;
+              else if (count >= 2) {
                 // At least three players are required for a round
                 if (!czarSocket) {
                   return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
@@ -971,22 +995,8 @@ function initSocket(socket: sio.Socket, userId: number) {
         if (err || !msg) return fn({error: err});
         fn({message: msg});
 
-        db.getRoomUsers(user.roomId, (err, roomUsers) => {
-          if (err || !roomUsers) return console.warn("Failed to get users for room #" + user.roomId);
 
-          for (const roomUserId in roomUsers) {
-            console.debug("Hi: " + roomUserId);
-            let roomUser = roomUsers[roomUserId];
-
-            let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id === userId) continue;
-
-            // Send the message to other active users
-            if (roomUser.state !== UserState.inactive) {
-              socket.emit("chatMessage", {message: msg});
-            }
-          }
-        });
+        broadcastMessage(msg, user.roomId, userId);
       });
     });
   });

@@ -5,7 +5,7 @@ Play Cards Against Humanity over the internet!
 ## Bugs:
 
 - [ ] Bottom card text in wrapped response display
-- [ ] User list contains users who have left if joining after they left
+- [x] User list contains users who have left if joining after they left
 - [ ] Caq text slides from top when revealing card
 - [ ] Hide excess likes on a message
 

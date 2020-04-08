@@ -2,7 +2,7 @@ import mysql = require("mysql");
 import helpers = require("./helpers");
 import {UserState, User, RoomUser} from "./struct/users";
 import {RoomState, Room, Message} from "./struct/rooms";
-import {Card, BlackCard} from "./struct/cards";
+import {Card, BlackCard, CardState} from "./struct/cards";
 
 /**************
  * Connection *
@@ -185,6 +185,24 @@ export function setRoomState(roomId: number, state: RoomState, fn?: (error?: str
   });
 }
 
+export function countSubmittedCards(roomId: number, fn: (err?: string, count?: number) => void) {
+  // Check if we have received enough answers to start reading them
+  con.query(`
+      SELECT id
+      FROM white_cards
+      WHERE id IN (
+        SELECT card_id
+        FROM room_white_cards
+        WHERE room_id = ? AND state = ${CardState.selected}                
+      );
+    `, [roomId], (err, results) => {
+    if (err) {
+      console.warn(`Failed to get selected cards for room #${roomId}:`, err);
+      return fn("MySQL Error");
+    } else return fn(undefined, results.length);
+  });
+}
+
 /********
  * Chat *
  ********/
@@ -342,6 +360,9 @@ export function getWhiteCards(roomId: number, userId: number, count: number, fn:
     });
 
     fn(undefined, cards);
+
+    // TODO: "Failed to mark white card as used: duplicate primary key"
+
 
     // Prevent the chosen cards from being reused
     let sql = `INSERT INTO room_white_cards (card_id, room_id, user_id) VALUES `;
