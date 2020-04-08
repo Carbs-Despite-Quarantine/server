@@ -30,7 +30,6 @@ function getRawUser(userId: number, fn: (err?: string, baseUser?: any) => void):
       console.warn("Failed to get user #" + userId + ":", err);
       return fn("MySQL Error");
     } else if (results.length === 0) return fn("Invalid User ID");
-
     fn(undefined, results[0]);
   });
 }
@@ -39,8 +38,8 @@ export function getUser(userId: number, fn: (err?: string, user?: User) => void)
   getRawUser(userId, (err, rawUser) => {
     if (err || !rawUser) return fn(err);
 
-    if (rawUser.roomId) {
-      return fn(undefined, new RoomUser(rawUser.id, rawUser.icon, rawUser.name, rawUser.state, rawUser.roomId, rawUser.score));
+    if (rawUser.room_id) {
+      return fn(undefined, new RoomUser(rawUser.id, rawUser.icon, rawUser.name, rawUser.state, rawUser.room_id, rawUser.score));
     } else fn(undefined, new User(rawUser.id, rawUser.icon, rawUser.name));
   });
 }
@@ -116,10 +115,10 @@ export function getRoom(roomId: number, fn: (err?: string, room?: Room) => void)
     SELECT 
       token, 
       edition, 
-      rotate_czar as rotateCzar, 
-      cur_prompt as curPrompt, 
+      rotate_czar AS rotateCzar, 
+      cur_prompt AS curPrompt, 
       state, 
-      selected_response as selectedResponse
+      selected_response AS selectedResponse
     FROM rooms
     WHERE id = ?;
   `, [roomId],(err, results) => {
@@ -159,7 +158,7 @@ export function getRoomUsers(roomId: number, fn: (error?: string, users?: Record
 
     // Convert arrays to objects (TODO: efficiency?)
     results.forEach(row => {
-      users[row.id] = new RoomUser(row.id, row.icon, row.name, row.state, row.roomId, row.score);
+      users[row.id] = new RoomUser(row.id, row.icon, row.name, row.state, roomId, row.score);
     });
 
     fn(undefined, users);
@@ -176,7 +175,7 @@ export function deleteRoom(roomId: number): void {
 }
 
 export function setRoomState(roomId: number, state: RoomState, fn?: (error?: string) => void): void {
-  con.query(`UPDATE rooms SET state = ? WHERE id = ?;`, [state, roomId], (err) => {
+  con.query(`UPDATE rooms SET state = ?, selectedCard = null WHERE id = ?;`, [state, roomId], (err) => {
     if (err) {
       if (fn) fn("MySQL Error");
       return console.warn("Failed to set state for room #" + roomId + ":", err);

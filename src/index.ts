@@ -111,7 +111,7 @@ function finishSetupRoom(userId: number, roomId: number, roomUsers: Record<numbe
       let roomUser = roomUsers[roomUserId];
 
       const socket = getSocket(roomUser.id);
-      if (roomUser.id === userId || !socket) return;
+      if (roomUser.id === userId || !socket) continue;
 
       let roomSettings = {
         edition: edition,
@@ -155,10 +155,10 @@ function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, R
     for (const roomUserId in roomUsers) {
       let roomUser = roomUsers[roomUserId];
 
-      if (roomUser.state === UserState.inactive) return;
+      if (roomUser.state === UserState.inactive) continue;
 
       let socket = getSocket(roomUser.id);
-      if (!socket || roomUser.id === user.id) return;
+      if (!socket || roomUser.id === user.id) continue;
 
       // Send the new users info to all other active room users
       socket.emit("userJoined", {
@@ -180,7 +180,7 @@ function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefine
     db.getLatestMessages(room.id, 15, (err, messages) => {
       if (err || !messages) {
         console.warn("failed to get latest messages from room #" + room.id + ": " + err);
-      } else room.messages = messages;
+      }
 
       // Add the client to the user list
       roomUsers[user.id] = new RoomUser(user.id, user.icon, user.name, UserState.idle, room.id, 0);
@@ -207,7 +207,8 @@ function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefine
         edition: room.edition,
         rotateCzar: room.rotateCzar,
         selectedResponse: room.selectedResponse,
-        curPrompt: promptCard
+        curPrompt: promptCard,
+        messages: messages
       };
 
       fn({
@@ -230,7 +231,7 @@ function finishSelectResponse(user: RoomUser, roomUsers: Record<number, RoomUser
       let roomUser = roomUsers[roomUserId];
 
       let socket = getSocket(roomUser.id);
-      if (!socket || roomUser.id === user.id) return;
+      if (!socket || roomUser.id === user.id) continue;
 
       socket.emit("selectResponse", {cardId: cardId});
     }
@@ -326,7 +327,7 @@ function initSocket(socket: sio.Socket, userId: number) {
             let roomUser = roomUsers[roomUserId];
 
             let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id !== userId) return;
+            if (!socket || roomUser.id !== userId) continue;
 
             if (roomUser.state !== UserState.inactive && !roomUser.icon) {
               socket.emit("iconTaken", {icon: data.icon});
@@ -358,7 +359,6 @@ function initSocket(socket: sio.Socket, userId: number) {
         db.addUserToRoom(userId, roomId, UserState.czar, (err) => {
           if (err) return fn({error: err});
 
-          // TODO: removed userId array, need to update client
           // Used to represent the room on the client
           let room = new Room(roomId, token);
 
@@ -500,7 +500,7 @@ function initSocket(socket: sio.Socket, userId: number) {
 
               if (roomUser.id !== userId && roomUser.state !== UserState.inactive && roomUser.name && roomUser.icon) {
                 newCzarId = roomUser.id;
-                break;
+                break
               }
             }
 
@@ -626,7 +626,7 @@ function initSocket(socket: sio.Socket, userId: number) {
               let roomUser = roomUsers[roomUserId];
 
               let socket = getSocket(roomUser.id);
-              if (!socket || roomUser.id === userId) return;
+              if (!socket || roomUser.id === userId) continue;
 
 
               if (roomUser.state === UserState.czar) {
@@ -720,7 +720,7 @@ function initSocket(socket: sio.Socket, userId: number) {
               for (const roomUserId in roomUsers) {
                 // TODO: consistency
                 let socket = getSocket(parseInt(roomUserId));
-                if (!socket) return;
+                if (!socket) continue;
 
                 socket.emit("startReadingAnswers", {
                   count: submissions
@@ -787,7 +787,7 @@ function initSocket(socket: sio.Socket, userId: number) {
               for (const roomUserId in roomUsers) {
                 // TODO: consistency
                 let socket = getSocket(parseInt(roomUserId));
-                if (!socket) return;
+                if (!socket) continue;
 
                 socket.emit("revealResponse", {
                   position: data.position,
@@ -916,7 +916,7 @@ function initSocket(socket: sio.Socket, userId: number) {
                   for (const roomUserId in roomUsers) {
                     // TODO: consistency
                     let socket = getSocket(parseInt(roomUserId));
-                    if (!socket) return;
+                    if (!socket) continue;
 
                     socket.emit("selectWinner", {
                       card: winningCard,
@@ -961,6 +961,8 @@ function initSocket(socket: sio.Socket, userId: number) {
    * Chat System *
    ***************/
 
+  // TODO: room owner cannot send messages or likes
+
   socket.on("chatMessage", (data, fn) => {
     if (!helpers.validateString(data.content)) return fn({error: "Invalid Message"});
 
@@ -975,10 +977,11 @@ function initSocket(socket: sio.Socket, userId: number) {
           if (err || !roomUsers) return console.warn("Failed to get users for room #" + user.roomId);
 
           for (const roomUserId in roomUsers) {
+            console.debug("Hi: " + roomUserId);
             let roomUser = roomUsers[roomUserId];
 
             let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id === userId) return;
+            if (!socket || roomUser.id === userId) continue;
 
             // Send the message to other active users
             if (roomUser.state !== UserState.inactive) {
@@ -1028,7 +1031,7 @@ function initSocket(socket: sio.Socket, userId: number) {
               let roomUser = roomUsers[roomUserId];
 
               let socket = getSocket(roomUser.id);
-              if (!socket || roomUser.id === userId) return;
+              if (!socket || roomUser.id === userId) continue;
 
               // Send the like information to other active users
               if (roomUser.state !== UserState.inactive) {
@@ -1065,7 +1068,7 @@ function initSocket(socket: sio.Socket, userId: number) {
             let roomUser = roomUsers[roomUserId];
 
             let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id === userId) return;
+            if (!socket || roomUser.id === userId) continue;
 
             if (roomUser.state !== UserState.inactive) {
               socket.emit("unlikeMessage", {msgId: data.msgId, userId: userId});
