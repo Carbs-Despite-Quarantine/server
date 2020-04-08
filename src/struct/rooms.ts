@@ -1,5 +1,3 @@
-import {Message} from "../vars";
-
 export enum RoomState {
   "new" = 1,            // The room has been created but not set up
   "choosingCards", // Players are chosing responses

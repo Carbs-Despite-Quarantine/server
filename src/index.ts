@@ -2,6 +2,7 @@ import express = require("express");
 import sio = require("socket.io");
 
 const app: express.Application = express();
+app.set("port", process.env.PORT || 3000);
 
 const http = require("http").createServer(app);
 const io = sio(http);
@@ -199,10 +200,18 @@ function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefine
         }
       }
 
-      // TODO: removed user id list from room, need to update client to support change
+      // Match the structure of the client room object
+      let clientRoom = {
+        id: room.id,
+        state: room.state,
+        edition: room.edition,
+        rotateCzar: room.rotateCzar,
+        selectedResponse: room.selectedResponse,
+        curPrompt: promptCard
+      };
 
       fn({
-        room: room,
+        room: clientRoom,
         users: roomUsers,
         iconChoices: getAvailableIcons(roomIcons)
       });
@@ -421,12 +430,12 @@ function initSocket(socket: sio.Socket, userId: number) {
       if (err || !user) return fn({error: err});
 
       // We need the room to check if the game has started yet
-      db.getRoom(data.roomId, (err, room) => {
+      db.getRoom(user.roomId, (err, room) => {
         if (err || !room) return fn({error: err});
 
-        db.getRoomUsers(data.roomId, (err, roomUsers) => {
+        db.getRoomUsers(user.roomId, (err, roomUsers) => {
           if (err || !roomUsers) {
-            console.warn("Failed to get user list for room #" + data.roomId);
+            console.warn("Failed to get user list for room #" + user.roomId);
             return fn({error: "Unexpected error"});
           } else if (!(userId in roomUsers)) {
             return fn({error: "Can't enter room that hasn't been joined"});
@@ -437,9 +446,8 @@ function initSocket(socket: sio.Socket, userId: number) {
           db.setUserName(userId, user.name);
 
           if (room.state !== RoomState.new) {
-            db.getWhiteCards(data.roomId, userId, HandSize, (err, cards) => {
+            db.getWhiteCards(user.roomId, userId, HandSize, (err, cards) => {
               if (err || !cards) {
-                console.log("Room ID: " + data.roomId + " valid? ", helpers.validateUInt(data.roomId));
                 console.warn("Failed to get white cards for new user #" + userId + ":", err);
                 return fn({error: err});
               }
