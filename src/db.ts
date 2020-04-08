@@ -175,7 +175,7 @@ export function deleteRoom(roomId: number): void {
 }
 
 export function setRoomState(roomId: number, state: RoomState, fn?: (error?: string) => void): void {
-  con.query(`UPDATE rooms SET state = ?, selectedCard = null WHERE id = ?;`, [state, roomId], (err) => {
+  con.query(`UPDATE rooms SET state = ?, selected_response = null WHERE id = ?;`, [state, roomId], (err) => {
     if (err) {
       if (fn) fn("MySQL Error");
       return console.warn("Failed to set state for room #" + roomId + ":", err);
@@ -306,6 +306,9 @@ export function getBlackCard(roomId: number, fn: (error?: string, card?: BlackCa
     con.query(`
       INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)
     `, [card.id, roomId], (err) => {
+      // TODO: this logs an error if the last two users in a room leave in quick succession
+      // since we try to get a new black card when the czar leaves,
+      // but by the time we have the new card, the room has been deleted
       if (err) return console.warn("Failed to mark black card as used:", err);
     });
 

@@ -145,11 +145,9 @@ function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, R
   db.createMessage(user.id, "joined the room", true, (err, message) => {
     fn({message: message, hand: hand});
 
-    let state = UserState.idle;
-
     if (room.state === RoomState.choosingCards) {
       db.setUserState(user.id, UserState.choosing);
-      state = UserState.choosing;
+      user.state = UserState.choosing;
     }
 
     for (const roomUserId in roomUsers) {
