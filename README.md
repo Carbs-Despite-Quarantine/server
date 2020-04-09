@@ -16,9 +16,9 @@ Play Cards Against Humanity over the internet!
  - [x] Only store sockets in user object
 
 ## Features:
-- [ ] Swap out entire hand
+- [x] Swap out entire hand
 - [ ] "card card" option (extra random white card)
-- [ ] Rotate czar option
+- [x] Rotate czar option
 - [ ] End game option? Display stats?
 - [ ] Spectate the round if joining midway
 - [ ] Mobile layout

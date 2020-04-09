@@ -1,9 +1,11 @@
 export enum UserState {
-  "idle" = 1,           // The user is idle
-  "choosing",      // The user is selecting a white card
-  "czar",          // The user is the card czar
-  "winner",        // The user won the most recent round
-  "inactive"       // The user has left their game
+  "idle" = 1,                // The user is idle
+  "choosing",           // The user is selecting a white card
+  "czar",               // The user is the card czar
+  "winner",             // The user won the most recent round but will not be the czar
+  "nextCzar",           // The user has been selected as the czar for the next round
+  "winnerAndNextCzar",  // The user won the round and has been selected as the next czar
+  "inactive"            // The user has left their game
 }
 
 export class User {

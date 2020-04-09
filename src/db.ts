@@ -76,8 +76,8 @@ export function setUserState(userId: number, state: UserState): void {
   });
 }
 
-export function setWinner(userId: number, score: number): void {
-  con.query(`UPDATE users SET score = ?, state = ${UserState.winner} WHERE id = ?;`,
+export function setWinner(userId: number, score: number, alsoNextCzar=true): void {
+  con.query(`UPDATE users SET score = ?, state = ${alsoNextCzar ? UserState.winnerAndNextCzar : UserState.winner} WHERE id = ?;`,
   [score, userId],(err) => {
     if (err) return console.warn("Failed to set score for user #" + userId + ":", err);
     console.debug("Set score for user #" + userId + " to '" + score + "'");

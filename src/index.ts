@@ -950,18 +950,58 @@ function initSocket(socket: sio.Socket, userId: number) {
                   return fn({error: "MySQL Error"});
                 }
 
+                let nextCzarId = winnerId;
+
+                // TODO: This is not exactly an efficient way to find the next czar
+                if (room.rotateCzar) {
+                  let foundNextCzar = false;
+                  let passedCzar = false;
+
+                  // Find the next active user after the czar
+                  for (const roomUserId in roomUsers) {
+                    let roomUser = roomUsers[roomUserId];
+                    if (roomUser.state === UserState.czar) passedCzar = true;
+                    else if (passedCzar && roomUser.state !== UserState.inactive) {
+                      foundNextCzar = true;
+                      nextCzarId = roomUser.id;
+                      break;
+                    }
+                  }
+
+                  // If the czar is near/at the end of the user array, start again at the start
+                  if (!foundNextCzar) {
+                    for (const roomUserId in roomUsers) {
+                      let roomUser = roomUsers[roomUserId];
+                      if (roomUser.state !== UserState.inactive && roomUser.state !== UserState.czar) {
+                        nextCzarId = roomUser.id;
+                        foundNextCzar = true;
+                        break;
+                      }
+                    }
+                  }
+
+                  if (!foundNextCzar) {
+                    console.warn("Failed to find a new czar for room with rotate option enabled, defaulting to winner");
+                  }
+                }
+
                 // Mark all active users except the winner as idle
                 db.con.query(`
                   UPDATE users 
                   SET state = ${UserState.idle}
-                  WHERE room_id = ? AND NOT id = ? AND NOT state = ${UserState.inactive};
-                `, [user.roomId, winnerId], (err) => {
+                  WHERE room_id = ? AND NOT id = ? AND NOT id = ? AND NOT state = ${UserState.inactive};
+                `, [user.roomId, winnerId, nextCzarId], (err) => {
                   if (err) {
                     console.warn("Failed to mark all users in room #" + user.roomId+ " as idle:", err);
                     return fn({error: "MySQL Error"});
                   }
 
-                  db.setWinner(winnerId as number, roomUsers[winnerId as number].score + 1);
+                  let winnerIsNextCzar = nextCzarId === winnerId;
+
+                  // Only use the nextCzar state if the winner and next czar are different
+                  if (!winnerIsNextCzar) db.setUserState(nextCzarId as number, UserState.nextCzar);
+
+                  db.setWinner(winnerId as number, roomUsers[winnerId as number].score + 1, winnerIsNextCzar);
                   db.setRoomState(user.roomId, RoomState.viewingWinner);
 
                   fn({});
@@ -973,7 +1013,8 @@ function initSocket(socket: sio.Socket, userId: number) {
 
                     socket.emit("selectWinner", {
                       card: winningCard,
-                      userId: winnerId
+                      winnerId: winnerId,
+                      nextCzarId: nextCzarId
                     });
                   }
                 });
@@ -989,7 +1030,7 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      if (user.state !== UserState.winner) {
+      if (user.state !== UserState.nextCzar && user.state != UserState.winnerAndNextCzar) {
         console.warn("User #" + userId + " with state '" + user.state + "' tried to start next round!");
         return fn({error: "Invalid User State"});
       }
