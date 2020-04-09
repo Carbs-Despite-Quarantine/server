@@ -1,5 +1,7 @@
 import express = require("express");
 import sio = require("socket.io");
+import db = require("./db");
+import helpers = require("./helpers");
 
 const app: express.Application = express();
 app.set("port", process.env.PORT || 3000);
@@ -7,11 +9,9 @@ app.set("port", process.env.PORT || 3000);
 const http = require("http").createServer(app);
 const io = sio(http);
 
-import db = require("./db");
-import helpers = require("./helpers");
-import {UserState, User, RoomUser} from "./struct/users";
-import {RoomState, Room, Message} from "./struct/rooms";
-import {CardState, Card, BlackCard} from "./struct/cards";
+import {RoomUser, User, UserState} from "./struct/users";
+import {Message, Room, RoomState} from "./struct/rooms";
+import {BlackCard, Card, CardState} from "./struct/cards";
 
 // A selection of Font Awesome icons suitable for profile pictures
 const Icons: Array<string> = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
@@ -101,6 +101,34 @@ function broadcastMessage(msg: Message, roomId: number, except?: number) {
   });
 }
 
+function replaceCzar(oldCzar: RoomUser, roomUsers: Record<number, RoomUser>) {
+  let newCzarId: number | undefined = undefined;
+
+  for (const roomUserId in roomUsers) {
+    let roomUser = roomUsers[roomUserId];
+
+    if (roomUser.id !== oldCzar.id && roomUser.state !== UserState.inactive && roomUser.name && roomUser.icon) {
+      newCzarId = roomUser.id;
+      break
+    }
+  }
+
+  if (!newCzarId) console.debug("There are no active players in room #" + oldCzar.roomId + ", but some users might be choosing a name/icon");
+  else console.log("Czar left room #" + oldCzar.roomId + ", replacing with user #" + newCzarId);
+
+  nextRound(oldCzar.roomId, newCzarId, roomUsers, (res: any) => {
+    if (res.error) return console.warn("Failed to start next round when czar left: ", res.error);
+    if (newCzarId) {
+      db.createMessage(newCzarId as number,
+        "took over from " + oldCzar.name + " as the Card Czar", true,
+      (err, msg) => {
+        if (err || !msg) return console.warn("Failed to broadcast new czar message:", err);
+        broadcastMessage(msg, oldCzar.roomId);
+      });
+    }
+  });
+}
+
 /********************
  * Socket Responses *
  ********************/
@@ -160,12 +188,29 @@ function finishSetupRoom(userId: number, roomId: number, roomUsers: Record<numbe
 function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, RoomUser>,
                          hand: Record<number, Card>, fn: (...args: any[]) => void): void {
   db.createMessage(user.id, "joined the room", true, (err, message) => {
-    fn({message: message, hand: hand});
 
-    if (room.state === RoomState.choosingCards) {
-      db.setUserState(user.id, UserState.choosing);
-      user.state = UserState.choosing;
+    let hasCzar = false;
+
+    // We need to loop the users twice in order to properly set the users state
+    for (const roomUserId in roomUsers) {
+      if (roomUsers[roomUserId].state === UserState.czar) {
+        hasCzar = true;
+        break;
+      }
     }
+
+    let state = UserState.idle;
+    if (room.state === RoomState.choosingCards) {
+      state = UserState.choosing;
+      if (!hasCzar) state = UserState.czar;
+    }
+
+    if (state != user.state) {
+      db.setUserState(user.id, state);
+      user.state = state;
+    }
+
+    fn({message: message, hand: hand, state: user.state});
 
     for (const roomUserId in roomUsers) {
       let roomUser = roomUsers[roomUserId];
@@ -253,7 +298,7 @@ function finishSelectResponse(user: RoomUser, roomUsers: Record<number, RoomUser
   });
 }
 
-function nextRound(roomId: number, czarId: number, roomUsers: Record<number, RoomUser>, fn: (...args: any[]) => void): void {
+function nextRound(roomId: number, czarId: number | undefined, roomUsers: Record<number, RoomUser>, fn: (...args: any[]) => void): void {
   // Get a black card for the new round
   db.getBlackCard(roomId, (err, blackCard) => {
     if (err || !blackCard) {
@@ -262,22 +307,22 @@ function nextRound(roomId: number, czarId: number, roomUsers: Record<number, Roo
     }
 
     db.setRoomState(roomId, RoomState.choosingCards);
-    db.setUserState(czarId, UserState.czar);
+    if (czarId) db.setUserState(czarId, UserState.czar);
 
     db.con.query(`
       UPDATE room_white_cards SET state = ${CardState.played}
       WHERE room_id = ? AND (state = ${CardState.selected} OR state = ${CardState.revealed});
     `, [roomId], (err) => {
       if (err) {
-        console.warn("Failed to maek cards as played when starting new round:", err);
+        console.warn("Failed to mark cards as played when starting new round:", err);
         return fn({error: "MySQL Error"});
       }
 
       // All active users apart from the czar can now pick a card
       db.con.query(`
         UPDATE users SET state = ${UserState.choosing}
-        WHERE room_id = ? AND NOT id = ? AND NOT state = ${UserState.inactive};
-      `, [roomId, czarId], (err) => {
+        WHERE room_id = ?${czarId ? " AND NOT id = " + czarId : ""} AND NOT state = ${UserState.inactive};
+      `, [roomId], (err) => {
         if (err) {
           console.warn("Failed to mark user states as choosingCards for next round:", err);
           return fn({error: "MySQL Error"});
@@ -495,22 +540,28 @@ function initSocket(socket: sio.Socket, userId: number) {
           return;
         }
 
-        // TODO: what if user leaves after responses are revealed?
-        db.con.query(`
-          DELETE FROM room_white_cards WHERE user_id = ? AND state = ${CardState.selected}
-         `, [userId], (err, results) => {
-          if (err) return console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
-          else if (results.affectedRows > 0) {
-            db.countSubmittedCards(user.roomId, (err, count) => {
-              if (err || !count) return;
-              if (count == 1) {
-                for (const roomUserId in roomUsers) {
-                  let roomUser = roomUsers[roomUserId];
-                  let socket = getSocket(roomUser.id);
+        db.getRoom(user.roomId, (err, room) => {
+          if (err || !room) return;
 
-                  // There is only one answer left, we can't read them now
-                  if (socket && roomUser.state === UserState.czar) socket.emit("answersNotReady");
-                }
+          // Only remove submitted cards if the room is still in the choosing phase
+          if (room.state === RoomState.choosingCards) {
+            db.con.query(`
+              DELETE FROM room_white_cards WHERE user_id = ? AND state = ${CardState.selected}
+            `, [userId], (err, results) => {
+              if (err) return console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
+              else if (results.affectedRows > 0) {
+                db.countSubmittedCards(user.roomId, (err, count) => {
+                  if (err || !count) return;
+                  if (count == 1) {
+                    for (const roomUserId in roomUsers) {
+                      let roomUser = roomUsers[roomUserId];
+                      let socket = getSocket(roomUser.id);
+
+                      // There is only one answer left, we can't read them now
+                      if (socket && roomUser.state === UserState.czar) socket.emit("answersNotReady");
+                    }
+                  }
+                });
               }
             });
           }
@@ -522,31 +573,7 @@ function initSocket(socket: sio.Socket, userId: number) {
           if (countActiveUsersOnLeave(userId, roomUsers, msg) === 0) db.deleteRoom(user.roomId);
           else if (user.state === UserState.czar || user.state === UserState.winner) {
             // If the czar or winner leaves, we need to start a new round
-            let newCzarId: number | undefined = undefined;
-
-            for (const roomUserId in roomUsers) {
-              let roomUser = roomUsers[roomUserId];
-
-              if (roomUser.id !== userId && roomUser.state !== UserState.inactive && roomUser.name && roomUser.icon) {
-                newCzarId = roomUser.id;
-                break
-              }
-            }
-
-            if (!newCzarId) {
-              console.warn("Failed to find a new czar for room #" + user.roomId);
-            } else {
-              console.log("Czar left room #" + user.roomId + ", replacing with user #" + newCzarId);
-              nextRound(user.roomId, newCzarId, roomUsers, res => {
-                if (res.error) return console.warn("Failed to start next round when czar left: ", res.error);
-                db.createMessage(newCzarId as number,
-                  "took over from " + user.name + " as the Card Czar", true,
-                (err, msg) => {
-                  if (err || !msg) return console.warn("Failed to broadcast new czar message:", err);
-                  broadcastMessage(msg, user.roomId);
-                })
-              });
-            }
+            replaceCzar(user, roomUsers);
           }
         });
       });
@@ -906,6 +933,10 @@ function initSocket(socket: sio.Socket, userId: number) {
               if (!winnerId) {
                 console.warn("Winning card was not found in room_white_cards!");
                 return fn({error: "Invalid Card"});
+              } else if (roomUsers[winnerId].state === UserState.inactive) {
+                // Start a new round with a different czar if the winner is inactive
+                fn({});
+                return replaceCzar(roomUsers[winnerId], roomUsers);
               }
 
               // Mark all revealed cards as played
