@@ -1061,8 +1061,7 @@ function initSocket(socket: sio.Socket, userId: number) {
         if (room.state === RoomState.new) return fn({error: "Invalid Room State"});
 
         db.con.query(`
-          UPDATE room_white_cards
-          SET state = ${CardState.played}
+          DELETE FROM room_white_cards
           WHERE user_id = ? AND state = ${CardState.hand};
         `, [userId], (err) => {
           if (err) {
