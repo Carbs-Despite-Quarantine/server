@@ -8,7 +8,7 @@ Play Cards Against Humanity over the internet!
 - [x] User list contains users who have left if joining after they left
 - [x] Caq text slides from top when revealing card
 - [ ] Sides are clipped with more than five response cards on wide browsers
-- [ ] Hide excess likes on a message
+- [x] Hide excess likes on a message
 
 ## Refactor:
 
