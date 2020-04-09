@@ -1010,6 +1010,40 @@ function initSocket(socket: sio.Socket, userId: number) {
     });
   });
 
+  socket.on("recycleHand", (fn) => {
+    db.getRoomUser(userId, (err, user) => {
+      if (err || !user) return fn({error: err});
+      if (!user.name || !user.icon) return fn({error: "Can't recycle hand before entering room!"});
+
+      db.getRoom(user.roomId, (err, room) => {
+        if (err || !room) return fn({error: err});
+        if (room.state === RoomState.new) return fn({error: "Invalid Room State"});
+
+        db.con.query(`
+          UPDATE room_white_cards
+          SET state = ${CardState.played}
+          WHERE user_id = ? AND state = ${CardState.hand};
+        `, [userId], (err) => {
+          if (err) {
+            console.warn("Failed to delete old cards for recycle:", err);
+            return fn({error: "MySQL Error"});
+          }
+
+          db.getWhiteCards(user.roomId, userId, HandSize, (err, cards) => {
+            if (err || !cards) return fn({error: err});
+
+            db.createMessage(userId, "recycled their cards", true, (err, message) => {
+              if (err || !message) return fn({error: err});
+
+              fn({cards: cards, message: message});
+              broadcastMessage(message, user.roomId, userId);
+            })
+          });
+        });
+      });
+    });
+  });
+
   /***************
    * Chat System *
    ***************/
