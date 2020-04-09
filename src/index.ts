@@ -387,7 +387,7 @@ function initSocket(socket: sio.Socket, userId: number) {
             let roomUser = roomUsers[roomUserId];
 
             let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id !== userId) continue;
+            if (!socket || roomUser.id === userId) continue;
 
             if (roomUser.state !== UserState.inactive && !roomUser.icon) {
               socket.emit("iconTaken", {icon: data.icon});
