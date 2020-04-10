@@ -34,13 +34,16 @@ function getRawUser(userId: number, fn: (err?: string, baseUser?: any) => void):
   });
 }
 
+export function parseUser(rawUser: any): User {
+  if (rawUser.room_id) {
+    return new RoomUser(rawUser.id, rawUser.icon, rawUser.name, rawUser.state, rawUser.room_id, rawUser.score);
+  } else return new User(rawUser.id, rawUser.icon, rawUser.name);
+}
+
 export function getUser(userId: number, fn: (err?: string, user?: User) => void): void {
   getRawUser(userId, (err, rawUser) => {
     if (err || !rawUser) return fn(err);
-
-    if (rawUser.room_id) {
-      return fn(undefined, new RoomUser(rawUser.id, rawUser.icon, rawUser.name, rawUser.state, rawUser.room_id, rawUser.score));
-    } else fn(undefined, new User(rawUser.id, rawUser.icon, rawUser.name));
+    return fn(undefined, parseUser(rawUser));
   });
 }
 

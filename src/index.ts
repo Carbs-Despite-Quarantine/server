@@ -346,6 +346,18 @@ function nextRound(roomId: number, czarId: number | undefined, roomUsers: Record
   });
 }
 
+function deleteUser(userId: number) {
+  if (sockets.hasOwnProperty(userId)) delete sockets[userId];
+  db.deleteUser(userId);
+}
+
+function deleteRoom(roomId: number, roomUsers: Record<number, RoomUser>) {
+  for (const roomUserId in roomUsers) {
+    if (sockets.hasOwnProperty(roomUserId)) delete sockets[roomUserId];
+  }
+  db.deleteRoom(roomId);
+}
+
 /*******************
  * Socket Handling *
  *******************/
@@ -525,7 +537,7 @@ function initSocket(socket: sio.Socket, userId: number) {
   socket.on("userLeft", () => {
     db.getRoomUser(userId, (err, user) => {
       // Delete the user if they weren't in a room
-      if (err || !user) return db.deleteUser(userId);
+      if (err || !user) return deleteUser(userId);
 
       db.setUserState(userId, UserState.inactive);
 
@@ -535,8 +547,8 @@ function initSocket(socket: sio.Socket, userId: number) {
         // If the user never entered the room, don't inform users of leave
         if (!user.name) {
 
-          if (countActiveUsersOnLeave(userId, roomUsers) === 0) db.deleteRoom(user.roomId);
-          else db.deleteUser(userId);
+          if (countActiveUsersOnLeave(userId, roomUsers) === 0) deleteRoom(user.roomId, roomUsers);
+          else deleteUser(userId);
           return;
         }
 
@@ -570,7 +582,7 @@ function initSocket(socket: sio.Socket, userId: number) {
         db.createMessage(userId, "left the room", true, (err, msg) => {
           if (err || !msg) console.warn("Failed to create leave msg for user #" + user.id + ":", err);
           // Delete the room once all users have left
-          if (countActiveUsersOnLeave(userId, roomUsers, msg) === 0) db.deleteRoom(user.roomId);
+          if (countActiveUsersOnLeave(userId, roomUsers, msg) === 0) deleteRoom(user.roomId, roomUsers);
           else if (user.state === UserState.czar || user.state === UserState.winner) {
             // If the czar or winner leaves, we need to start a new round
             replaceCzar(user, roomUsers);
@@ -682,21 +694,26 @@ function initSocket(socket: sio.Socket, userId: number) {
             db.setUserState(userId, UserState.idle);
 
             let czarSocket: sio.Socket | undefined = undefined;
+            let maxResponses = 0;
 
             // Check if all users have submitted a card
             for (const roomUserId in roomUsers) {
               let roomUser = roomUsers[roomUserId];
 
               let socket = getSocket(roomUser.id);
-              if (!socket || roomUser.id === userId) continue;
+              if (!socket) continue;
 
 
               if (roomUser.state === UserState.czar) {
                 if (czarSocket) console.warn("Multiple czars were found in room #" + user.roomId + "!");
                 czarSocket = socket;
+              } else if (roomUser.state !== UserState.inactive) {
+                maxResponses++;
               }
 
-              socket.emit("userState", {userId: userId, state: UserState.idle});
+              if (roomUser.id !== userId) {
+                socket.emit("userState", {userId: userId, state: UserState.idle});
+              }
             }
 
             db.countSubmittedCards(user.roomId, (err, count) => {
@@ -706,7 +723,11 @@ function initSocket(socket: sio.Socket, userId: number) {
                 if (!czarSocket) {
                   return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
                 }
-                czarSocket.emit("answersReady");
+
+                czarSocket.emit("answersReady", {
+                  count: count,
+                  maxResponses: maxResponses
+                });
               }
             });
           });
@@ -1194,9 +1215,33 @@ function initSocket(socket: sio.Socket, userId: number) {
 }
 
 io.on("connection", (socket) => {
+  let socketUserId = parseInt(socket.handshake.query.userId);
+  let socketUserToken = socket.handshake.query.userToken;
+
+  // Try to reconnect old session
+  if (helpers.validateUInt(socketUserId) && helpers.validateHash(socketUserToken, 8)) {
+    db.con.query(
+      `SELECT * from users WHERE id = ? AND token = ?;`,
+    [socketUserId, socketUserToken], (err, results) => {
+      if (err) return console.warn("Failed to lookup reconnecting user #" + socketUserId);
+      else if (results.length == 0) {
+        console.warn("User #" + socketUserId + " tried to reconnect with an invalid token");
+        // TODO: reset client
+        return setupNewUser(socket);
+      } else {
+        console.debug("Reconnected user #" + socketUserId);
+        sockets[socketUserId] = socket;
+        initSocket(socket, socketUserId);
+      }
+    });
+  } else setupNewUser(socket);
+});
+
+function setupNewUser(socket: sio.Socket) {
+  let userToken = helpers.makeHash(8);
 
   // Add user to the database
-  db.con.query(`INSERT INTO users VALUES ();`, (err, result) => {
+  db.con.query(`INSERT INTO users (token) VALUES ('${userToken}');`, (err, result) => {
     if (err) {
       console.warn("Failed to create user:", err);
       return;
@@ -1204,19 +1249,20 @@ io.on("connection", (socket) => {
 
     let userId = result.insertId;
 
-     // Cache the socket object
+    // Cache the socket object
     sockets[userId] = socket;
 
     // Send the generated userId
     socket.emit("init", {
       userId: userId,
+      userToken: userToken,
       icons: Icons
     });
 
     // Only register socket callbacks now that we have a userId
     initSocket(socket, userId);
   });
-});
+}
 
 /**************
  * Web Server *

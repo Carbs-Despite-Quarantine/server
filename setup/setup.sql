@@ -70,12 +70,16 @@ CREATE TABLE rooms (
 
 CREATE TABLE users (
 	id INT NOT NULL AUTO_INCREMENT,
+	token VARCHAR(8) NOT NULL,
 	room_id INT,
 	name VARCHAR(16),
 	icon VARCHAR(16),
 	score INT NOT NULL DEFAULT 0,
 	state TINYINT NOT NULL DEFAULT 1,
-	PRIMARY KEY (id)
+	PRIMARY KEY (id),
+  FOREIGN KEY (room_id)
+    REFERENCES rooms (id)
+    ON DELETE CASCADE
 );
 
 CREATE TABLE messages (
