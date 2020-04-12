@@ -7,7 +7,7 @@ const app: express.Application = express();
 app.set("port", process.env.PORT || 3000);
 
 const http = require("http").createServer(app);
-const io = sio(http);
+const io = sio(http, {origins: '*:*'});
 
 import {RoomUser, User, UserState} from "./struct/users";
 import {Message, Room, RoomState} from "./struct/rooms";
