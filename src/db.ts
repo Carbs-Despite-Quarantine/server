@@ -362,15 +362,13 @@ export function getWhiteCards(roomId: number, userId: number, count: number, fn:
       cards[rawCard.id] = new Card(rawCard.id, rawCard.text);
     });
 
-    fn(undefined, cards);
-
-    // TODO: "Failed to mark white card as used: duplicate primary key"
-
-
     // Prevent the chosen cards from being reused
     let sql = `INSERT INTO room_white_cards (card_id, room_id, user_id) VALUES `;
     con.query(sql + cardsSql.join(", ") + ";", (err) => {
-      if (err) return console.warn("Failed to mark white card as used:", err);
+      if (err) {
+        console.warn("Failed to mark white card as used... trying again");
+        return getWhiteCards(roomId, userId, count, fn);
+      } else fn(undefined, cards);
     });
   });
 }
