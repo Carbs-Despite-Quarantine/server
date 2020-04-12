@@ -870,8 +870,8 @@ function initSocket(socket: sio.Socket, userId: number) {
               text: results[0].text
             };
 
-            db.con.query(`UPDATE room_white_cards SET state = ${CardState.revealed} WHERE card_id = ? `,
-            [card.id], (err) => {
+            db.con.query(`UPDATE room_white_cards SET state = ${CardState.revealed} WHERE card_id = ? AND room_id = ?;`,
+            [card.id, user.roomId], (err) => {
               if (err) {
                 console.warn("Failed to mark card as read:", err);
                 return fn({error: "MySQL Error"});
