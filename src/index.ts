@@ -65,19 +65,18 @@ function countActiveUsersOnLeave(userId: number, roomUsers: Record<number, RoomU
 
   for (const roomUserId in roomUsers) {
     let roomUser = roomUsers[roomUserId];
+    if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
 
     let socket = getSocket(roomUser.id);
     if (!socket) continue;
 
     // Notify active users that the user left
-    if (roomUser.id !== userId && roomUser.state !== UserState.inactive) {
-      activeUsers++;
-      if (leaveMessage) {
-        socket.emit("userLeft", {
-          userId: userId,
-          message: leaveMessage
-        });
-      }
+    activeUsers++;
+    if (leaveMessage) {
+      socket.emit("userLeft", {
+        userId: userId,
+        message: leaveMessage
+      });
     }
   }
   return activeUsers;
@@ -89,14 +88,13 @@ function broadcastMessage(msg: Message, roomId: number, except?: number) {
 
     for (const roomUserId in roomUsers) {
       let roomUser = roomUsers[roomUserId];
+      if (roomUser.state === UserState.inactive || roomUser.id === except) continue;
 
       let socket = getSocket(roomUser.id);
-      if (!socket || roomUser.id === except) continue;
+      if (!socket) continue;
 
       // Send the message to other active users
-      if (roomUser.state !== UserState.inactive) {
-        socket.emit("chatMessage", {message: msg});
-      }
+      socket.emit("chatMessage", {message: msg});
     }
   });
 }
@@ -154,9 +152,10 @@ function finishSetupRoom(userId: number, roomId: number, roomUsers: Record<numbe
 
     for (const roomUserId in roomUsers) {
       let roomUser = roomUsers[roomUserId];
+      if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
 
       const socket = getSocket(roomUser.id);
-      if (roomUser.id === userId || !socket) continue;
+      if (!socket) continue;
 
       let roomSettings = {
         edition: edition,
@@ -214,11 +213,10 @@ function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, R
 
     for (const roomUserId in roomUsers) {
       let roomUser = roomUsers[roomUserId];
-
-      if (roomUser.state === UserState.inactive) continue;
+      if (roomUser.state === UserState.inactive || roomUser.id === user.id) continue;
 
       let socket = getSocket(roomUser.id);
-      if (!socket || roomUser.id === user.id) continue;
+      if (!socket) continue;
 
       // Send the new users info to all other active room users
       socket.emit("userJoined", {
@@ -271,11 +269,42 @@ function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefine
         messages: messages
       };
 
-      fn({
+      let response: {[key: string]: any} = {
         room: clientRoom,
         users: roomUsers,
         iconChoices: getAvailableIcons(roomIcons)
-      });
+      };
+
+      if (room.state === RoomState.readingCards) {
+        db.con.query(`
+          SELECT rwc.card_id AS id, rwc.response_position as position, wc.text FROM room_white_cards as rwc
+          LEFT JOIN white_cards AS wc ON rwc.card_id = wc.id
+          WHERE (state = ${CardState.selected} OR state = ${CardState.revealed}) AND room_id = ?;
+        `, [room.id], (err, results) => {
+          if (err) console.warn("Failed to fetch revealed cards for newly joined user #" + user.id + " in room #" + room.id + ":" , err);
+          else {
+            response.revealedResponses = {};
+            response.responsesCount = results.length;
+
+            results.forEach((result: any) => {
+              if (result.position != null) response.revealedResponses[result.position] = new Card(result.id, result.text);
+            });
+          }
+          fn(response);
+        });
+      } else if (room.state === RoomState.viewingWinner) {
+        db.con.query(`
+          SELECT id, text FROM white_cards
+          WHERE id in (
+            SELECT card_id FROM room_white_cards
+            WHERE room_id = ? AND state = ${CardState.winner}
+          );
+        `, [room.id], (err, results) => {
+          if (err) console.warn("Failed to get winning card text for newly joined user #" + user.id + " in room #" + room.id + ":", err);
+          else if (results.length > 0) response.winningCard = new Card(results[0].id, results[0].text);
+          fn(response);
+        });
+      } else fn(response);
     });
   });
 }
@@ -289,9 +318,10 @@ function finishSelectResponse(user: RoomUser, roomUsers: Record<number, RoomUser
 
     for (const roomUserId in roomUsers) {
       let roomUser = roomUsers[roomUserId];
+      if (roomUser.state === UserState.inactive || roomUser.id === user.id) continue;
 
       let socket = getSocket(roomUser.id);
-      if (!socket || roomUser.id === user.id) continue;
+      if (!socket) continue;
 
       socket.emit("selectResponse", {cardId: cardId});
     }
@@ -310,8 +340,8 @@ function nextRound(roomId: number, czarId: number | undefined, roomUsers: Record
     if (czarId) db.setUserState(czarId, UserState.czar);
 
     db.con.query(`
-      UPDATE room_white_cards SET state = ${CardState.played}
-      WHERE room_id = ? AND (state = ${CardState.selected} OR state = ${CardState.revealed});
+      UPDATE room_white_cards SET state = ${CardState.played}, response_position = NULL
+      WHERE room_id = ? AND NOT state = ${CardState.hand} AND NOT state = ${CardState.played};
     `, [roomId], (err) => {
       if (err) {
         console.warn("Failed to mark cards as played when starting new round:", err);
@@ -332,8 +362,10 @@ function nextRound(roomId: number, czarId: number | undefined, roomUsers: Record
         fn({});
 
         for (const roomUserId in roomUsers) {
-          // TODO: consistency - use parseInt or fetch user and check id ?
-          let socket = getSocket(parseInt(roomUserId));
+          let roomUser = roomUsers[roomUserId];
+          if (roomUser.state === UserState.inactive) continue;
+
+          let socket = getSocket(roomUser.id);
           if (!socket) continue;
 
           socket.emit("nextRound", {
@@ -397,13 +429,12 @@ function initSocket(socket: sio.Socket, userId: number) {
           // Notify users who are yet to choose an icon that the chosen icon is now unavailable
           for (const roomUserId in roomUsers) {
             let roomUser = roomUsers[roomUserId];
+            if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
 
             let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id === userId) continue;
+            if (!socket) continue;
 
-            if (roomUser.state !== UserState.inactive && !roomUser.icon) {
-              socket.emit("iconTaken", {icon: data.icon});
-            }
+            if (!roomUser.icon) socket.emit("iconTaken", {icon: data.icon});
           }
         });
       } else {
@@ -567,10 +598,12 @@ function initSocket(socket: sio.Socket, userId: number) {
                   if (count == 1) {
                     for (const roomUserId in roomUsers) {
                       let roomUser = roomUsers[roomUserId];
+                      if (roomUser.state !== UserState.czar) continue;
+
                       let socket = getSocket(roomUser.id);
 
                       // There is only one answer left, we can't read them now
-                      if (socket && roomUser.state === UserState.czar) socket.emit("answersNotReady");
+                      if (socket) socket.emit("answersNotReady");
                     }
                   }
                 });
@@ -696,15 +729,8 @@ function initSocket(socket: sio.Socket, userId: number) {
             return fn({error: "Invalid Card"});
           }
 
-          db.con.query(`
-            UPDATE room_white_cards 
-            SET state = ${CardState.selected} 
-            WHERE room_id = ? AND card_id = ? AND user_id = ? AND state = ${CardState.hand};
-          `,  [user.roomId, data.cardId, userId], (err) => {
-            if (err) {
-              console.warn("Failed to submit card #" + data.cardId + ":", err);
-              return fn({error: "MySQL Error"});
-            }
+          db.setCardState(CardState.selected, user.roomId, data.cardId, userId, CardState.hand, (err) => {
+            if (err) return fn({error: err});
 
             // Try to get a new white card to replace the one which was submitted
             db.getWhiteCards(user.roomId, userId, 1, (err, newCard) => {
@@ -721,6 +747,7 @@ function initSocket(socket: sio.Socket, userId: number) {
               // Check if all users have submitted a card
               for (const roomUserId in roomUsers) {
                 let roomUser = roomUsers[roomUserId];
+                if (roomUser.state === UserState.inactive) continue;
 
                 let socket = getSocket(roomUser.id);
                 if (!socket) continue;
@@ -729,7 +756,7 @@ function initSocket(socket: sio.Socket, userId: number) {
                 if (roomUser.state === UserState.czar) {
                   if (czarSocket) console.warn("Multiple czars were found in room #" + user.roomId + "!");
                   czarSocket = socket;
-                } else if (roomUser.state !== UserState.inactive) {
+                } else if (roomUser.name && roomUser.icon) {
                   maxResponses++;
                 }
 
@@ -811,8 +838,10 @@ function initSocket(socket: sio.Socket, userId: number) {
               db.setRoomState(user.roomId, RoomState.readingCards);
 
               for (const roomUserId in roomUsers) {
-                // TODO: consistency
-                let socket = getSocket(parseInt(roomUserId));
+                let roomUser = roomUsers[roomUserId];
+                if (roomUser.state === UserState.inactive) continue;
+
+                let socket = getSocket(roomUser.id);
                 if (!socket) continue;
 
                 socket.emit("startReadingAnswers", {
@@ -870,16 +899,21 @@ function initSocket(socket: sio.Socket, userId: number) {
               text: results[0].text
             };
 
-            db.con.query(`UPDATE room_white_cards SET state = ${CardState.revealed} WHERE card_id = ? AND room_id = ?;`,
-            [card.id, user.roomId], (err) => {
+            db.con.query(`
+              UPDATE room_white_cards 
+              SET state = ${CardState.revealed}, response_position = ? 
+              WHERE card_id = ? AND room_id = ?;
+             `, [data.position, card.id, user.roomId], (err) => {
               if (err) {
                 console.warn("Failed to mark card as read:", err);
                 return fn({error: "MySQL Error"});
               }
               fn({});
               for (const roomUserId in roomUsers) {
-                // TODO: consistency
-                let socket = getSocket(parseInt(roomUserId));
+                let roomUser = roomUsers[roomUserId];
+                if (roomUser.state === UserState.inactive) continue;
+
+                let socket = getSocket(roomUser.id);
                 if (!socket) continue;
 
                 socket.emit("revealResponse", {
@@ -983,16 +1017,18 @@ function initSocket(socket: sio.Socket, userId: number) {
                 return replaceCzar(roomUsers[winnerId], roomUsers);
               }
 
-              // Mark all revealed cards as played
+              // Mark all revealed cards that didn't win as played
               db.con.query(`
                 UPDATE room_white_cards 
-                SET state = ${CardState.played} 
-                WHERE room_id = ? AND state = ${CardState.revealed};
-              `, [user.roomId], (err) => {
+                SET state = ${CardState.played}, response_position = NULL
+                WHERE room_id = ? AND state = ${CardState.revealed} AND NOT card_id = ?;
+              `, [user.roomId, data.cardId], (err) => {
                 if (err) {
                   console.warn("Failed to mark cards as played:", err);
                   return fn({error: "MySQL Error"});
                 }
+
+                db.setCardState(CardState.winner, user.roomId, data.cardId);
 
                 let nextCzarId = winnerId;
 
@@ -1051,8 +1087,10 @@ function initSocket(socket: sio.Socket, userId: number) {
                   fn({});
 
                   for (const roomUserId in roomUsers) {
-                    // TODO: consistency
-                    let socket = getSocket(parseInt(roomUserId));
+                    let roomUser = roomUsers[roomUserId];
+                    if (roomUser.state === UserState.inactive) continue;
+
+                    let socket = getSocket(roomUser.id);
                     if (!socket) continue;
 
                     socket.emit("selectWinner", {
@@ -1186,14 +1224,13 @@ function initSocket(socket: sio.Socket, userId: number) {
 
             for (const roomUserId in roomUsers) {
               let roomUser = roomUsers[roomUserId];
+              if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
 
               let socket = getSocket(roomUser.id);
-              if (!socket || roomUser.id === userId) continue;
+              if (!socket) continue;
 
               // Send the like information to other active users
-              if (roomUser.state !== UserState.inactive) {
-                socket.emit("likeMessage", {msgId: data.msgId, userId: userId});
-              }
+              socket.emit("likeMessage", {msgId: data.msgId, userId: userId});
             }
           });
         });
@@ -1223,13 +1260,12 @@ function initSocket(socket: sio.Socket, userId: number) {
           if (err || !roomUsers) return console.warn("Failed to get users for room #" + user.roomId);
           for (const roomUserId in roomUsers) {
             let roomUser = roomUsers[roomUserId];
+            if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
 
             let socket = getSocket(roomUser.id);
-            if (!socket || roomUser.id === userId) continue;
+            if (!socket) continue;
 
-            if (roomUser.state !== UserState.inactive) {
-              socket.emit("unlikeMessage", {msgId: data.msgId, userId: userId});
-            }
+            socket.emit("unlikeMessage", {msgId: data.msgId, userId: userId});
           }
         });
       });

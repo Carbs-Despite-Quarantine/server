@@ -327,7 +327,7 @@ export function getBlackCard(roomId: number, fn: (error?: string, card?: BlackCa
     con.query(`
       INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)
     `, [card.id, roomId], (err) => {
-      // TODO: this logs an error if the last two users in a room leave in quick succession
+      // aTODO: this logs an error if the last two users in a room leave in quick succession
       // since we try to get a new black card when the czar leaves,
       // but by the time we have the new card, the room has been deleted
       if (err) return console.warn("Failed to mark black card as used:", err);
@@ -348,7 +348,6 @@ export function getBlackCardByID(id: number, fn: (error?: string, card?: BlackCa
   });
 }
 
-// TODO: output for single card has been changed to object, react accordingly
 export function getWhiteCards(roomId: number, userId: number, count: number, fn: (error?: string, cards?: Record<number, Card>) => void): void {
   if (!helpers.validateUInt(userId)) return fn("Invalid User ID");
   getCards(roomId, false, count, (err, rawCards) => {
@@ -377,5 +376,18 @@ export function getWhiteCardByID(id: number, fn: (error?: string, card?: Card) =
   getCardByID(id, false, (err, card) => {
     if (err || !card) return fn(err);
     fn(undefined, new Card(card.id, card.text));
+  });
+}
+
+export function setCardState(state: CardState, roomId: number, cardId: number, userId?: number, oldState?: CardState, fn?: (err?: string) => void): void {
+  con.query(`
+    UPDATE room_white_cards 
+    SET state = ${state} 
+    WHERE room_id = ? AND card_id = ? ${userId ? ("AND user_id = " + userId) : ""} ${oldState ? ("AND state = " + oldState) : ""};
+  `,  [roomId, cardId], (err) => {
+    if (err) {
+      console.warn("Failed to set card #" + cardId + " to state #" + state + ":", err);
+      if (fn) return fn("MySQL Error");
+    } else if (fn) return fn();
   });
 }

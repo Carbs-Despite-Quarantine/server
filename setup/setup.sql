@@ -127,6 +127,7 @@ CREATE TABLE room_white_cards (
 	card_id INT NOT NULL,
 	user_id INT,
 	state TINYINT NOT NULL DEFAULT 1,
+	response_position TINYINT,
 	PRIMARY KEY (room_id, card_id),
 	FOREIGN KEY (room_id)
 		REFERENCES rooms (id)
