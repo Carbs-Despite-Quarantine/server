@@ -670,65 +670,88 @@ function initSocket(socket: sio.Socket, userId: number) {
       db.getRoomUsers(user.roomId, (err, roomUsers) => {
         if (err || !roomUsers) {
           console.warn("Failed to get users when submitting card in room #" + user.roomId);
-          return fn({error: err});
+          return fn({error: "MySQL Error"});
         }
 
-        // We can validate the card simply by trying to update it and checking the number of rows affected
         db.con.query(`
-          UPDATE room_white_cards 
-          SET state = ${CardState.selected} 
-          WHERE room_id = ? AND card_id = ? AND user_id = ? AND state = ${CardState.hand};
-        `,  [user.roomId, data.cardId, userId], (err, results) => {
+          SELECT card_id FROM room_white_cards
+          WHERE room_id = ? AND user_id = ? AND state = ${CardState.hand};
+        `, [user.roomId, userId], (err, results) => {
           if (err) {
-            console.warn("Failed to submit card #" + data.cardId + ":", err);
+            console.warn("Failed to check hand for user #" + userId + ":", err);
             return fn({error: "MySQL Error"});
-          } else if (results.affectedRows === 0) return fn({error: "Invalid Card"});
+          }
 
-          // Try to get a new white card to replace the one which was submitted
-          db.getWhiteCards(user.roomId, userId, 1, (err, newCard) => {
-            if (err || !newCard) {
-              console.warn("Failed to get new card for user #" + userId + ":", err);
-              fn({});
-            } else fn({newCard: newCard[parseInt(Object.keys(newCard)[0])]}); // TODO: this is a serious mess..
+          let foundSelectedCard = false;
 
-            db.setUserState(userId, UserState.idle);
+          for (const result in results) {
+            if (results[result].card_id === data.cardId) {
+              foundSelectedCard = true;
+              break;
+            }
+          }
 
-            let czarSocket: sio.Socket | undefined = undefined;
-            let maxResponses = 0;
+          if (!foundSelectedCard) {
+            console.warn("User #" + userId + " tried to submit card #" + data.cardId + " which they didn't own!");
+            return fn({error: "Invalid Card"});
+          }
 
-            // Check if all users have submitted a card
-            for (const roomUserId in roomUsers) {
-              let roomUser = roomUsers[roomUserId];
-
-              let socket = getSocket(roomUser.id);
-              if (!socket) continue;
-
-
-              if (roomUser.state === UserState.czar) {
-                if (czarSocket) console.warn("Multiple czars were found in room #" + user.roomId + "!");
-                czarSocket = socket;
-              } else if (roomUser.state !== UserState.inactive) {
-                maxResponses++;
-              }
-
-              if (roomUser.id !== userId) {
-                socket.emit("userState", {userId: userId, state: UserState.idle});
-              }
+          db.con.query(`
+            UPDATE room_white_cards 
+            SET state = ${CardState.selected} 
+            WHERE room_id = ? AND card_id = ? AND user_id = ? AND state = ${CardState.hand};
+          `,  [user.roomId, data.cardId, userId], (err) => {
+            if (err) {
+              console.warn("Failed to submit card #" + data.cardId + ":", err);
+              return fn({error: "MySQL Error"});
             }
 
-            db.countSubmittedCards(user.roomId, (err, count) => {
-              if (err || !count) return;
-              else if (count >= 2) {
-                // At least three players are required for a round
-                if (!czarSocket) {
-                  return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
+            // Try to get a new white card to replace the one which was submitted
+            db.getWhiteCards(user.roomId, userId, 1, (err, newCard) => {
+              if (err || !newCard) {
+                console.warn("Failed to get new card for user #" + userId + ":", err);
+                fn({});
+              } else fn({newCard: newCard[parseInt(Object.keys(newCard)[0])]}); // TODO: this is a serious mess..
+
+              db.setUserState(userId, UserState.idle);
+
+              let czarSocket: sio.Socket | undefined = undefined;
+              let maxResponses = 0;
+
+              // Check if all users have submitted a card
+              for (const roomUserId in roomUsers) {
+                let roomUser = roomUsers[roomUserId];
+
+                let socket = getSocket(roomUser.id);
+                if (!socket) continue;
+
+
+                if (roomUser.state === UserState.czar) {
+                  if (czarSocket) console.warn("Multiple czars were found in room #" + user.roomId + "!");
+                  czarSocket = socket;
+                } else if (roomUser.state !== UserState.inactive) {
+                  maxResponses++;
                 }
 
-                czarSocket.emit("answersReady", {
-                  count: count,
-                  maxResponses: maxResponses
-                });
+                if (roomUser.id !== userId) {
+                  socket.emit("userState", {userId: userId, state: UserState.idle});
+                }
               }
+
+              db.countSubmittedCards(user.roomId, (err, count) => {
+                if (err || !count) return;
+                else if (count >= 2) {
+                  // At least three players are required for a round
+                  if (!czarSocket) {
+                    return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
+                  }
+
+                  czarSocket.emit("answersReady", {
+                    count: count,
+                    maxResponses: maxResponses
+                  });
+                }
+              });
             });
           });
         });
