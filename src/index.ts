@@ -594,8 +594,8 @@ function initSocket(socket: sio.Socket, userId: number) {
               if (err) return console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
               else if (results.affectedRows > 0) {
                 db.countSubmittedCards(user.roomId, (err, count) => {
-                  if (err || !count) return;
-                  if (count == 1) {
+                  if (err || count === undefined) return;
+                  if (count < 2) {
                     for (const roomUserId in roomUsers) {
                       let roomUser = roomUsers[roomUserId];
                       if (roomUser.state !== UserState.czar) continue;
@@ -766,16 +766,73 @@ function initSocket(socket: sio.Socket, userId: number) {
               }
 
               db.countSubmittedCards(user.roomId, (err, count) => {
-                if (err || !count) return;
-                else if (count >= 2) {
-                  // At least three players are required for a round
-                  if (!czarSocket) {
-                    return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
-                  }
+                if (err || count === undefined) return;
 
-                  czarSocket.emit("answersReady", {
-                    count: count,
-                    maxResponses: maxResponses
+                if (!czarSocket) {
+                  return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
+                }
+
+                czarSocket.emit("answersReady", {
+                  count: count,
+                  maxResponses: maxResponses
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+
+  socket.on("skipPrompt", (data, fn) => {
+    db.getRoomUser(userId, (err, user) => {
+      if (err || !user) return fn({error: err});
+
+      if (user.state !== UserState.czar) {
+        console.warn("User #" + userId + " with state '" + user.state + "' tried to skip the prompts!");
+        return fn({error: "Invalid User State"});
+      }
+
+      db.getRoom(user.roomId, (err, room) => {
+        if (err || !room) return fn({error: err});
+        if (room.state !== RoomState.choosingCards) return fn({error: "Invalid Room State"});
+
+        db.getRoomUsers(user.roomId, (err, roomUsers) => {
+          if (err || !roomUsers) {
+            console.warn("Failed to get users when skipping prompt in room #" + user.roomId + ":", err);
+            return fn({error: err});
+          }
+
+          db.countSubmittedCards(user.roomId, (err, count) => {
+            if (err) {
+              console.warn("Failed to count submitted cards in room#" + user.roomId);
+              return fn({error: "MySQL Error"});
+            }
+
+            if (count && count > 0) {
+              console.warn("User #" + userId + " tried to skip prompt despite already having " + count + " answers submitted");
+              return fn({error: "Can't skip prompt once responses are submitted"});
+            }
+
+            db.getBlackCard(user.roomId, (err, blackCard) => {
+              if (err || !blackCard) {
+                console.warn("Failed to get new prompt in room #" + user.roomId + ":", err);
+                return fn({error: err});
+              }
+
+              db.createMessage(userId, "skipped the prompt", true, (err, message) => {
+                if (err || !message) console.warn("Failed to create 'skipped prompt' message in room #" + user.roomId + ":", err);
+
+                for (const roomUserId in roomUsers) {
+                  let roomUser = roomUsers[roomUserId];
+                  if (roomUser.state === UserState.inactive) continue;
+
+                  let socket = getSocket(roomUser.id);
+                  if (!socket) continue;
+
+                  socket.emit("skipPrompt", {
+                    newPrompt: blackCard,
+                    message: message
                   });
                 }
               });
