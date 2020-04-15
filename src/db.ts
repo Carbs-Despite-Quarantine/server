@@ -135,7 +135,7 @@ export function getRoom(roomId: number, fn: (err?: string, room?: Room) => void)
     }
     fn(undefined, new Room(
       roomId, results[0].token, results[0].adminToken,
-      results[0].state, results[0].edition, results[0].flaredUser,
+      results[0].state, results[0].flaredUser, results[0].edition,
       results[0].rotateCzar, results[0].curPrompt, results[0].selectedResponse)
     );
   });

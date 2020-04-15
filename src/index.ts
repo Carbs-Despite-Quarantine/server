@@ -294,6 +294,7 @@ function continueJoinRoom(user: User, room: Room, promptCard: BlackCard | undefi
       let clientRoom = {
         id: room.id,
         state: room.state,
+        flaredUser: room.flaredUser,
         edition: room.edition,
         rotateCzar: room.rotateCzar,
         selectedResponse: room.selectedResponse,
