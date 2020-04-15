@@ -60,8 +60,10 @@ INSERT INTO editions (id, name) VALUES
 CREATE TABLE rooms (
 	id INT NOT NULL AUTO_INCREMENT,
 	token VARCHAR(8) NOT NULL,
+	admin_token VARCHAR(8) NOT NULL,
 	edition VARCHAR(8),
 	rotate_czar BOOLEAN DEFAULT FALSE,
+	flared_user INT,
 	cur_prompt INT,
 	state TINYINT NOT NULL DEFAULT 1,
 	selected_response INT,
@@ -71,6 +73,7 @@ CREATE TABLE rooms (
 CREATE TABLE users (
 	id INT NOT NULL AUTO_INCREMENT,
 	token VARCHAR(8) NOT NULL,
+	admin BOOLEAN DEFAULT FALSE,
 	room_id INT,
 	name VARCHAR(16),
 	icon VARCHAR(16),

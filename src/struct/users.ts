@@ -10,13 +10,15 @@ export enum UserState {
 
 export class User {
   id: number;
+  admin: boolean;
   state: UserState;
 
   name: string | undefined;
   icon: string | undefined;
 
-  constructor(id: number, icon?: string, name?: string) {
+  constructor(id: number, admin: boolean, icon?: string, name?: string) {
     this.id = id;
+    this.admin = admin;
     this.state = UserState.idle;
 
     this.icon = icon;
@@ -28,8 +30,8 @@ export class RoomUser extends User {
   roomId: number;
   score: number;
 
-  constructor(id: number, icon: string | undefined, name: string | undefined, state: UserState, roomId: number, score: number) {
-    super(id, icon, name);
+  constructor(id: number, admin: boolean, icon: string | undefined, name: string | undefined, state: UserState, roomId: number, score: number) {
+    super(id, admin, icon, name);
     this.state = state;
 
     this.roomId = roomId;

@@ -14,14 +14,13 @@ import {Message, Room, RoomState} from "./struct/rooms";
 import {BlackCard, Card, CardState} from "./struct/cards";
 
 // A selection of Font Awesome icons suitable for profile pictures
-const Icons: Array<string> = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider"];
+const Icons: Array<string> = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider", "holly-berry"];
 
 // Contains the same packs as the database, but this is quicker to access for validation
 const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA" ];
 
 // The number of white cards in a standard CAH hand
 const HandSize: number = 7;
-
 
 // Maps user ID's to socket objects
 const sockets: Record<number, sio.Socket> = {};
@@ -227,7 +226,40 @@ function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, R
   });
 }
 
-function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefined, fn: (...args: any[]) => void): void {
+function finishJoinRoom(user: User, response: { [key: string]: any }, fn: (...args: any[]) => void): void {
+  if (response.room.state === RoomState.readingCards) {
+    db.con.query(`
+          SELECT rwc.card_id AS id, rwc.response_position as position, wc.text FROM room_white_cards as rwc
+          LEFT JOIN white_cards AS wc ON rwc.card_id = wc.id
+          WHERE (state = ${CardState.selected} OR state = ${CardState.revealed}) AND room_id = ?;
+        `, [response.room.id], (err, results) => {
+      if (err) console.warn("Failed to fetch revealed cards for newly joined user #" + user.id + " in room #" + response.room.id + ":" , err);
+      else {
+        response.revealedResponses = {};
+        response.responsesCount = results.length;
+
+        results.forEach((result: any) => {
+          if (result.position != null) response.revealedResponses[result.position] = new Card(result.id, result.text);
+        });
+      }
+      fn(response);
+    });
+  } else if (response.room.state === RoomState.viewingWinner) {
+    db.con.query(`
+          SELECT id, text FROM white_cards
+          WHERE id in (
+            SELECT card_id FROM room_white_cards
+            WHERE room_id = ? AND state = ${CardState.winner}
+          );
+        `, [response.room.id], (err, results) => {
+      if (err) console.warn("Failed to get winning card text for newly joined user #" + user.id + " in room #" + response.room.id + ":", err);
+      else if (results.length > 0) response.winningCard = new Card(results[0].id, results[0].text);
+      fn(response);
+    });
+  } else fn(response);
+}
+
+function continueJoinRoom(user: User, room: Room, promptCard: BlackCard | undefined, fn: (...args: any[]) => void): void {
   // Do this before getting messages since it doubles as a check for room validity
   db.getRoomUsers(room.id, (err, roomUsers) => {
     if (err || !roomUsers) {
@@ -241,10 +273,10 @@ function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefine
       }
 
       // Add the client to the user list
-      roomUsers[user.id] = new RoomUser(user.id, user.icon, user.name, UserState.idle, room.id, 0);
+      roomUsers[user.id] = new RoomUser(user.id, user.admin, user.icon, user.name, UserState.idle, room.id, 0);
 
       // Add the user to the room
-      db.addUserToRoom(user.id, room.id, UserState.idle);
+      db.addUserToRoom(user.id, room.id, UserState.idle, user.admin);
 
       // Make aa list of the icons currently in use
       let roomIcons: Array<string> = [];
@@ -269,42 +301,40 @@ function finishJoinRoom(user: User, room: Room, promptCard: BlackCard | undefine
         messages: messages
       };
 
-      let response: {[key: string]: any} = {
+      let response: { [key: string]: any } = {
         room: clientRoom,
         users: roomUsers,
         iconChoices: getAvailableIcons(roomIcons)
       };
 
-      if (room.state === RoomState.readingCards) {
+      if (user.admin) {
         db.con.query(`
-          SELECT rwc.card_id AS id, rwc.response_position as position, wc.text FROM room_white_cards as rwc
-          LEFT JOIN white_cards AS wc ON rwc.card_id = wc.id
-          WHERE (state = ${CardState.selected} OR state = ${CardState.revealed}) AND room_id = ?;
+          SELECT 
+            id, name, 
+            IF(id IN (
+              SELECT pack_id
+              FROM room_packs
+              WHERE room_id = ?
+            ), 1, 0) AS enabled
+          FROM packs 
+          ORDER BY RAND();
         `, [room.id], (err, results) => {
-          if (err) console.warn("Failed to fetch revealed cards for newly joined user #" + user.id + " in room #" + room.id + ":" , err);
-          else {
-            response.revealedResponses = {};
-            response.responsesCount = results.length;
-
-            results.forEach((result: any) => {
-              if (result.position != null) response.revealedResponses[result.position] = new Card(result.id, result.text);
-            });
+          if (err) {
+            console.warn("Failed to retrieve pack list when creating room:", err);
+            return fn({error: "MySQL Error"});
           }
-          fn(response);
+
+          let packs: Record<string, { id: string, name: string, enabled: boolean }> = {};
+          results.forEach((result: any) => packs[result.id] = {
+            id: result.id,
+            name: result.name,
+            enabled: result.enabled == true
+          });
+
+          response.packs = packs;
+          finishJoinRoom(user, response, fn);
         });
-      } else if (room.state === RoomState.viewingWinner) {
-        db.con.query(`
-          SELECT id, text FROM white_cards
-          WHERE id in (
-            SELECT card_id FROM room_white_cards
-            WHERE room_id = ? AND state = ${CardState.winner}
-          );
-        `, [room.id], (err, results) => {
-          if (err) console.warn("Failed to get winning card text for newly joined user #" + user.id + " in room #" + room.id + ":", err);
-          else if (results.length > 0) response.winningCard = new Card(results[0].id, results[0].text);
-          fn(response);
-        });
-      } else fn(response);
+      } else finishJoinRoom(user, response, fn);
     });
   });
 }
@@ -450,16 +480,17 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      let token = helpers.makeHash(8);
+      const token = helpers.makeHash(8);
+      const adminToken = helpers.makeHash(8);
 
-      db.con.query(`INSERT INTO rooms (token) VALUES (?);`, [token], (err, result) => {
+      db.con.query(`INSERT INTO rooms (token, admin_token) VALUES (?, ?);`, [token, adminToken], (err, result) => {
         if (err) {
           console.warn("Failed to create room:", err);
           return fn({error: "MySQL Error"});
         }
 
         let roomId = result.insertId;
-        db.addUserToRoom(userId, roomId, UserState.czar, (err) => {
+        db.addUserToRoom(userId, roomId, UserState.czar, false,(err) => {
           if (err) return fn({error: err});
 
           // Used to represent the room on the client
@@ -513,14 +544,22 @@ function initSocket(socket: sio.Socket, userId: number) {
       db.getRoomWithToken(data.roomId, data.token, (err, room) => {
         if (err || !room) return fn({error: err});
 
+        if (data.adminToken) {
+          if (data.adminToken !== room.adminToken) {
+            return fn({error: "Invalid Admin Token"});
+          } else {
+            user.admin = true;
+          }
+        }
+
         if (room.curPrompt) {
           db.getBlackCardByID(room.curPrompt, (err, promptCard) => {
             if (err || !promptCard) {
               console.warn("Received invalid prompt card for room #" + data.roomId + ":", err);
-              finishJoinRoom(user, room, undefined, fn);
-            } else finishJoinRoom(user, room, promptCard, fn);
+              continueJoinRoom(user, room, undefined, fn);
+            } else continueJoinRoom(user, room, promptCard, fn);
           });
-        } else finishJoinRoom(user, room, undefined, fn);
+        } else continueJoinRoom(user, room, undefined, fn);
       });
     });
   });
@@ -685,6 +724,52 @@ function initSocket(socket: sio.Socket, userId: number) {
     });
   });
 
+  /******************
+   * Admin Controls *
+   ******************/
+
+  socket.on("applyFlair", (data, fn) => {
+    db.getRoomUser(userId, (err, user) => {
+      if (err || !user) return fn({error: err});
+
+      if (!user.admin) return fn({error: "No Permission"});
+
+      db.getRoomUsers(user.roomId, (err, roomUsers) => {
+        if (err || !roomUsers) {
+          console.warn("Failed to get users when setting flair in room #" + user.roomId);
+          return fn({error: "MySQL Error"});
+        }
+
+        if (data.userId && !roomUsers.hasOwnProperty(data.userId)) data.userId = undefined;
+
+        db.con.query(`
+          UPDATE rooms
+          SET flared_user = ?
+          WHERE id = ?
+        `, [data.userId || null, user.roomId], (err) => {
+          if (err) {
+            console.warn("Failed to set flared user for room #" + user.roomId + ":", err);
+            return fn({error: "MySQL Error"});
+          }
+
+          fn({});
+
+          for (const roomUserId in roomUsers) {
+            const roomUser = roomUsers[roomUserId];
+            if (roomUser.state === UserState.inactive) continue;
+
+            const socket = getSocket(roomUser.id);
+            if (!socket) continue;
+
+            socket.emit("applyFlair", {
+              userId: data.userId
+            });
+          }
+        });
+      });
+    });
+  });
+
   /**************
    * Game Logic *
    **************/
@@ -788,7 +873,7 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      if (user.state !== UserState.czar) {
+      if (!user.admin && user.state !== UserState.czar) {
         console.warn("User #" + userId + " with state '" + user.state + "' tried to skip the prompts!");
         return fn({error: "Invalid User State"});
       }
@@ -847,7 +932,7 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      if (user.state !== UserState.czar) {
+      if (!user.admin && user.state !== UserState.czar) {
         console.warn("User #" + userId + " with state '" + user.state + "' tried to start reading answers!");
         return fn({error: "Invalid User State"});
       }
@@ -918,7 +1003,7 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      if (user.state !== UserState.czar) {
+      if (!user.admin && user.state !== UserState.czar) {
         console.warn("User #" + userId + " with state '" + user.state + "' tried to reveal a response!");
         return fn({error: "Invalid User State"});
       }
@@ -991,8 +1076,8 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      if (user.state !== UserState.czar) {
-        console.warn("User #" + userId + " with state '" + user.state + "' tried to reveal a response!");
+      if (!user.admin && user.state !== UserState.czar) {
+        console.warn("User #" + userId + " with state '" + user.state + "' tried to select a response!");
         return fn({error: "Invalid User State"});
       }
 
@@ -1002,7 +1087,7 @@ function initSocket(socket: sio.Socket, userId: number) {
 
         db.getRoomUsers(user.roomId, (err, roomUsers) => {
           if (err || !roomUsers) {
-            console.warn("Failed to get users when revealing card in room #" + user.roomId);
+            console.warn("Failed to get users when selecting card in room #" + user.roomId);
             return fn({error: err});
           }
 
@@ -1024,7 +1109,7 @@ function initSocket(socket: sio.Socket, userId: number) {
 
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn(user);
-      if (user.state !== UserState.czar) {
+      if (!user.admin && user.state !== UserState.czar) {
         console.warn("User #" + userId + " with state '" + user.state + "' tried to select a winning response!");
         return fn({error: "Invalid User State"});
       }

@@ -36,8 +36,8 @@ function getRawUser(userId: number, fn: (err?: string, baseUser?: any) => void):
 
 export function parseUser(rawUser: any): User {
   if (rawUser.room_id) {
-    return new RoomUser(rawUser.id, rawUser.icon, rawUser.name, rawUser.state, rawUser.room_id, rawUser.score);
-  } else return new User(rawUser.id, rawUser.icon, rawUser.name);
+    return new RoomUser(rawUser.id, rawUser.admin, rawUser.icon, rawUser.name, rawUser.state, rawUser.room_id, rawUser.score);
+  } else return new User(rawUser.id, rawUser.admin, rawUser.icon, rawUser.name);
 }
 
 export function getUser(userId: number, fn: (err?: string, user?: User) => void): void {
@@ -87,9 +87,9 @@ export function setWinner(userId: number, score: number, alsoNextCzar=true): voi
   });
 }
 
-export function addUserToRoom(userId: number, roomId: number, state: UserState, fn?: (err?: string) => void): void {
-  let sql = `UPDATE users SET room_id = ?, state = ? WHERE id = ?;`;
-  con.query(sql, [roomId, state, userId], (err) => {
+export function addUserToRoom(userId: number, roomId: number, state: UserState, admin?: boolean, fn?: (err?: string) => void): void {
+  let sql = `UPDATE users SET room_id = ?, state = ?, admin = ? WHERE id = ?;`;
+  con.query(sql, [roomId, state, admin == true, userId], (err) => {
     if (err) {
       if (fn) fn("MySQL Error");
       return console.warn("Failed to add user #" + userId + " to room #" + roomId + ":", err);
@@ -117,7 +117,9 @@ export function getRoom(roomId: number, fn: (err?: string, room?: Room) => void)
   con.query(`
     SELECT 
       token, 
+      admin_token AS adminToken,
       edition, 
+      flared_user AS flaredUser,
       rotate_czar AS rotateCzar, 
       cur_prompt AS curPrompt, 
       state, 
@@ -132,7 +134,9 @@ export function getRoom(roomId: number, fn: (err?: string, room?: Room) => void)
       return fn("Invalid Room ID");
     }
     fn(undefined, new Room(
-      roomId, results[0].token, results[0].state, results[0].edition, results[0].rotateCzar, results[0].curPrompt, results[0].selectedResponse)
+      roomId, results[0].token, results[0].adminToken,
+      results[0].state, results[0].edition, results[0].flaredUser,
+      results[0].rotateCzar, results[0].curPrompt, results[0].selectedResponse)
     );
   });
 }
@@ -161,7 +165,7 @@ export function getRoomUsers(roomId: number, fn: (error?: string, users?: Record
 
     // Convert arrays to objects (TODO: efficiency?)
     results.forEach(row => {
-      users[row.id] = new RoomUser(row.id, row.icon, row.name, row.state, roomId, row.score);
+      users[row.id] = new RoomUser(row.id, row.admin, row.icon, row.name, row.state, roomId, row.score);
     });
 
     fn(undefined, users);

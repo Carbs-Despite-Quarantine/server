@@ -8,7 +8,9 @@ export enum RoomState {
 export class Room {
   id: number;
   token: string;
+  adminToken: string | undefined;
   state: RoomState;
+  flaredUser: number | undefined;
 
   edition: string | undefined;
   rotateCzar: boolean | undefined;
@@ -17,11 +19,13 @@ export class Room {
 
   messages: Record<number, Message> = {};
 
-  constructor(id: number, token: string, state?: RoomState,
-              edition?: string, rotateCzar?: boolean,
-              curPrompt?: number, selectedResponse?: number) {
+  constructor(id: number, token: string, adminToken?: string,
+              state?: RoomState, flaredUser?: number, edition?: string,
+              rotateCzar?: boolean, curPrompt?: number, selectedResponse?: number) {
     this.id = id;
     this.token = token;
+    this.adminToken = adminToken;
+    this.flaredUser = flaredUser;
 
     if (state && state != RoomState.new) {
       this.state = state;
