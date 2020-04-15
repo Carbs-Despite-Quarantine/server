@@ -2044,7 +2044,6 @@ Response,What to do with all of this chocolate on my penis.,
 Set,Weed Pack,WEED
 Prompt,Everyone is staring at you because you're ___.,
 Prompt,"Hold up. I gotta deal with ___, then l'mma smoke this.",
-Prompt,"Instead of playing a card this round, everyone must stare the Card Czar while making a sound you'd make after tasting something delicious.",
 Prompt,"Okay here's the pitch. James Franco and Seth Rogen are trying to score some weed, and then ___ happens.",
 Mechanic,"You know what's, like, really funny when you think about it? ___.",
 ,,
@@ -2298,3 +2297,240 @@ Response,"Some fine dining in Wuhan, China.",
 Response,Getting sick on spring break.,
 Response,Eating a raw bat.,
 Response,The last roll of toilet paper.,
+Set,Disney Pack,DISNEY
+Prompt,______: if you say it loud enough, you always sound precocious.
+Prompt,______, the real reason why all the rum is gone.
+Prompt,______ are friends, not food.
+Prompt,According to Mary Poppins, what helps the medicine go down?
+Prompt,After Marvel and Star Wars, Disney just needs to buy ______.
+Prompt,Big Hero ______.
+Prompt,Can you feel ______ tonight?
+Prompt,Disney's Hall of ______.
+Prompt,Every Disney villain's plan includes ______ and ______.,PICK 2
+Prompt,For a time, Ariel thought ______ was for ______.,PICK 2
+Prompt,For your safety, remain seated with your seat belts fastened, keeping ______ inside the bobsled.
+Prompt,Genie, for my final wish, I wish for ______.
+Prompt,Hakuna Matata, what a wonderful phrase. It means no ______ for the rest of your days.
+Prompt,How typical. ______ exits into ______.
+Prompt,I can show you the world, shining, shimmering, ______.
+Prompt,I just can't wait to be ______!
+Prompt,I mean, it's crazy how we finish each other's ______.
+Prompt,I would trade ______ for a Disney World annual pass.
+Prompt,In order to boost ticket sales, Disney is making a land dedicated to ______.
+Prompt,Is this haunted room actually ______?
+Prompt,Let it go. Let it go. ______ never bothered me anyway.
+Prompt,Look at this ______. Isn't it neat? Wouldn't you think my collection's complete?
+Prompt,Me, Tarzan. You, ______.
+Prompt,Reindeers are better than ______.,
+Prompt,Mirror, mirror on the wall, who's the fairest of them all?
+Prompt,Mister, I'll make a ______ out of you.
+Prompt,Next on the list of Disney's unnecessary sequels: ______ 2.
+Prompt,My childhood was forever ruined when I saw ______.
+Prompt,No one is as ______ as Gaston!
+Prompt,Ohana means family and family means ______.
+Prompt,On a scale of 1 to dead Tadashi, how would you rate your pain?
+Prompt,Sadly Fantasyland does not refer to my fantasy of ______.
+Prompt,Since when is ______ a Disney princess?
+Prompt,Some day my ______ will come.
+Prompt,Thanks to Disney, I have unrealistic expectations about ______.
+Prompt,The Handsome Prince saved Snow White from death with ______.
+Prompt,The most wonderful thing about Tiggers is ______.
+Prompt,The new Roger Rabbit sequel contains live-action footage, groundbreaking animation and ______.
+Prompt,The Prince swore he'd marry the girl who fit the slipper, but he didn't expect her to be ______.
+Prompt,The Three Caballeros: Donald Duck, ______, and ______.,PICK 2
+Prompt,The Magical World of ______.
+Prompt,They say “guest,” but what they mean is ______.
+Prompt,Toy Story 5: ______.
+Prompt,Try the ______, it's delicious!
+Prompt,We have 999 happy haunts, but there’s room for ______.
+Prompt,What is Peter Pan's happy thought?
+Prompt,What is the missing ingredient from Tiana's gumbo?
+Prompt,What is the real reason Peter Pan never grew up?
+Prompt,What Disney needs is an attraction based on ______.
+Prompt,What's the most popular attraction at Tokyo Disneyland?
+Prompt,Why was I fired from Disneyland?
+Prompt,Yo ho, yo ho, ______ for me!
+Prompt,You know what they say about elephants with big ears? They have ______.
+Prompt,You want ______, I've got twenty! But who cares? No big deal. I want more.
+Prompt,You've got ______ in me.
+Response,101 piles of dog shit every day.
+Response,16 years of Maleficent's rage and the vibrator that could have prevented it.
+Response,A Bug's Life 2: Enter the Orkin Man
+Response,A child screaming its head off from overstimulation.
+Response,A $5 churro and a $6 Coke.
+Response,A coonskin cap.
+Response,A Disneyland character with its head off.
+Response,A fisting from Wreck-It Ralph.
+Response,A furry convention at Disneyland.
+Response,A magical day.
+Response,A maniac in a motorized wheelchair.
+Response,A novelty hat that you’re going to wear once and then stuff in a closet.
+Response,A parading group of singing newspaper boys.
+Response,A parking lot the size of New Jersey.
+Response,A protein spill.
+Response,A real boy!
+Response,A ride that's over faster than your sex life.
+Response,A snake in my boot.
+Response,A sprinkle of pixie dust.
+Response,Aladdin reminding you that Robin Williams is still dead.
+Response,Aladdin 4: Bombing Agrabah.
+Response,All the masturbating Rapunzel probably did when Mother Gothel was away.
+Response,An abominable snowman named Harold.
+Response,An emergency bathroom break.
+Response,An Experimental Prototype Community of Tomorrow.
+Response,An unexpected soft opening.
+Response,Anakin murdering younglings.
+Response,Animatronic Abraham Lincoln.
+Response,Another damned hidden Mickey.
+Response,Ariel filling out her sea-cups.
+Response,Ariel's new found vagina.
+Response,Ariel tricking Ursula because she was a soulless ginger.
+Response,Beast's fuzzy balls.
+Response,Beastiality and bondage themes in Beauty and the Beast.
+Response,Beauty and the Beast 2: Singing Guillotines.
+Response,Being a motherfucking all-powerful sorcerer and genie.
+Response,Being fisted like a Muppet.
+Response,Bibbidi-Bobbidi-Bitch Slap.
+Response,Brave's message of encouragement for all girls to be butchy lesbians.
+Response,Buying overpriced tickets just to get in and buy overpriced crap.
+Response,Buzz Lightyear Astro Blasters.
+Response,Buzz sodomizing Woody: you've got a friend in me.
+Response,Captain Hook's obsession with young boys.
+Response,Cartoons with racist subject matter.
+Response,Cars 7: McQueen Succumbs to Rust
+Response,Communal cast underwear.
+Response,Crop dusting the tightly packed Space Mountain line.
+Response,Dad jokes from the Jungle Cruise crews.
+Response,Dinner at Club 33.
+Response,Disney Afternoon delight.
+Response,Disney Cruise Lines and the requisite second mortgage.
+Response,Disney Plus and thrust.
+Response,Disney's lawyers making you their bitch.
+Response,Disney's obsession with killing off parents in kids’ movies.
+Response,Doc McStuffins.
+Response,Donald Dick.
+Response,Dory, the lesbian fish.
+Response,Eating too much honey at a friend's house and getting your fat ass stuck in the doorway.
+Response,Eeyore on Prozac.
+Response,Endlessly singing “Let It Go”.
+Response,E-ticket rides.
+Response,Erotic fan-fic about Hercules going the distance.
+Response,Escape to Bitch Mountain.
+Response,Fantasyland.
+Response,Finding Nemo 3: Marlin's Still a Dick
+Response,Flash photography.
+Response,Flubber.
+Response,Fondling Sleeping Beauty.
+Response,Forgetting how racist Peter Pan's Red Man song is.
+Response,Four fingers.
+Response,Gaston being roughly the size of a barge.
+Response,Gaston’s swallowing and spitting skills.
+Response,Getting oral from Davy Jones.
+Response,Getting stuck at the top of Splash Mountain
+Response,Getting tiki bird shirt in your hair.
+Response,Getting wet on a long log ride.
+Response,Gimp suits designed by Edna Mode.
+Response,Goofy's son implying Goofy had sex.
+Response,Grim grinning ghosts.
+Response,Hannah Montana and Alexis Texas: Best of Both Worlds.
+Response,Having inappropriate thoughts about animated animals.
+Response,Imagineering.
+Response,Indiana Jones’ gigantic ball.
+Response,James Earl Jones as Mufasa saying "I am your father".
+Response,John, the enchanted, talking chamber pot.
+Response,Judy Hopp's vibrating carrot.
+Response,Kaa's very long tongue.
+Response,Kama Sutra: Elastigirl Edition.
+Response,Licking Dole Whip off each other's assholes.
+Response,Lindsay Lohan: Fully Loaded.
+Response,Maclunkey!
+Response,Making out with your sibling to celebrate Star Wars weekend at Disney.
+Response,Making use of Olaf's detachable limbs.
+Response,Main Street, U.S.A.
+Response,Make-A-Wish kids spending their little remaining time in lines.
+Response,Making movies based on stories that are in the public domain.
+Response,Making up for years of shitty parenting with an expensive vacation.
+Response,Mickey finding Minnie in the mouse trap and having sex one last time.
+Response,Mickey Mouse, our 47th President.
+Response,Minnie Mouse's used panties.
+Response,Maui's 1000 year dry spell, Moana and a long boat ride with time to kill.
+Response,Mommy's toys named Buzz and Woody.
+Response,Mufasa! Say it again!
+Response,Mulan discovering she likes cross-dressing.
+Response,Mr. Incredible earning his name in more ways than one.
+Response,Mr. Potato Head's detachable genitals.
+Response,Mr. Toad's Wild Ride.
+Response,My Tumblr dedicated to erotic Scrooge McDuck art.
+Response,Not getting invited to a party and putting a curse upon the king's daughter.
+Response,Openly masturbating on It's A Small World.
+Response,Oswald the Lucky Rabbit.
+Response,Pirates of the Caribbean 9: Jack Sparrow Enters Rehab.
+Response,P. Sherman, 42 Wallaby Way, Sydney.
+Response,Pleasure Island.
+Response,Pocahontas and the interactive Wounded Knee exhibit.
+Response,Poor unfortunate souls.
+Response,Prince Charming kissing comatose women laying around the woods.
+Response,Prince Eric frying up filet of Flounder.
+Response,Princess and the Froggy-style.
+Response,Pumba and Timon watching Simba and Nala get it on.
+Response,Quasimodo's private time with his bells.
+Response,Queen Elsa's icy cavern.
+Response,Rapunzel using her prehensile hair to tickle her own fancy.
+Response,Rat poison and the shocking Chip and Dales series finale.
+Response,Remembering Bing Bong because Riley can't.
+Response,Remy's shit all over Gusteau's kitchen.
+Response,Renting a wheelchair you don’t need.
+Response,Rule 34 and BAE-max.
+Response,Selling one of your kids so you can go to Star Wars land when it opens.
+Response,Seven dwarves, a virgin and one bed.
+Response,Sex Toy Story.
+Response,Shooting Old Yeller.
+Response,Shoving a nut covered phallic shaped frozen banana in their mouth.
+Response,Singing pirates.
+Response,Sitting on Pinocchio's face and having him lie.
+Response,Sneaking onto the set of 101 Dalmatians with peanut butter and crotchless panties.
+Response,Snorting Coke off of Pluto’s Dick
+Response,Spending $200 so your toddler can scream all day in line.
+Response,Spontaneously breaking into song.
+Response,SQUIRREL!
+Response,Standing in line until your feet bleed.
+Response,Staying for the fireworks.
+Response,Stitch's tongue.
+Response,Stroller parking.
+Response,Sweaty, the eighth dwarf.
+Response,Switching places with your identical twin to try and fix a broken marriage.
+Response,Tarzan and Jane's wild jungle sex adventures.
+Response,The acid trip that is Fantasia.
+Response,The corpse of Bambi's mom in the meadow.
+Response,The Country Bear Jamboree.
+Response,The bloody deleted scene where Simba and Nala tear a zebra apart.
+Response,The first nine minutes of Up.
+Response,The frozen head of Walt Disney.
+Response,The ghost of Mufasa judging you from the heavens above.
+Response,The ghost of the old lady that died in the Haunted Mansion.
+Response,The happiest place on earth.
+Response,The inevitable gritty reboot of Song of the South.
+Response,The Love Bug.
+Response,The Many Adventures of Winnie the Pooh.
+Response,The Moopets.
+Response,The North Korea pavilion at Epcot.
+Response,The one company Disney doesn't own.
+Response,The Papyrus font all over Avatar land.
+Response,The racist crows from Dumbo.
+Response,The sad realization that Lady and the Tramp is not amateur hobo porn.
+Response,The tiki tiki tiki tiki tiki room.
+Response,The vibrating toy in Andy's Mom's nightstand
+Response,Things you shouldn't shove in the Brave Little Toaster.
+Response,Tiana: three fifths of a Disney princess.
+Response,Tinker Bell's cunty-ass attitude.
+Response,Tinker Bell's very short dress.
+Response,Toddler-eating alligators at Disney World.
+Response,Traumatizing your kids with Return to Oz.
+Response,Unreasonably laying claim over everything the light touches.
+Response,Ursula's secret past career in hentai.
+Response,Using Elastigirl as a sex swing.
+Response,Vaginal burns from Lumiere.
+Response,Waiting for my prince to come.
+Response,Waking up to “It’s A Small World” puppets at the foot of your bed.
+Response,Whatever happened to Huey, Dewey, and Louie’s parents.
+Response,Your hands, arms, feet, and legs.

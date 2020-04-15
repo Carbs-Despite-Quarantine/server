@@ -61,22 +61,25 @@ with open ("basecards.csv", encoding="utf8") as basecards:
         parseCard(row, "base")
     line += 1
 
-packs = {};
+packs = {}
 
-# Parse cards from the main expansion boxes (red, green, blue & absurd)
-with open ("packs.csv", encoding="utf8") as packsCsv:
-  csv_reader = csv.reader(packsCsv, delimiter=',')
-  line = 0;
-  curPack = ""
-  for row in csv_reader:
-    rowType = row[0]
-    if rowType == "Set":
-        curPack = row[2]
-        packs[row[2]] = row[1]
-        print(f"Found set '{row[1]}' (identified by '{row[2]}')")
-    else:
-        parseCard(row, curPack)
-    line += 1
+def parsePackFile(filename):
+  with open (filename, encoding="utf8") as packsCsv:
+    csv_reader = csv.reader(packsCsv, delimiter=',')
+    line = 0;
+    curPack = ""
+    for row in csv_reader:
+      rowType = row[0]
+      if rowType == "Set":
+          curPack = row[2]
+          packs[row[2]] = row[1]
+          print(f"Found set '{row[1]}' (identified by '{row[2]}')")
+      else:
+          parseCard(row, curPack)
+      line += 1
+
+parsePackFile("packs.csv")
+parsePackFile("custom.csv")
 
 print(f"Parsed {str(len(blackCards))} black cards and {str(len(whiteCards))} white cards!")
 
