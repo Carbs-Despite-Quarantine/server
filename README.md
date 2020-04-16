@@ -7,7 +7,7 @@ Play Cards Against Humanity over the internet!
 - [x] Bottom card text in wrapped response display
 - [x] User list contains users who have left if joining after they left
 - [x] Caq text slides from top when revealing card
-- [ ] Sides are clipped with more than five response cards on wide browsers
+- [x] Sides are clipped with more than five response cards on wide browsers
 - [x] Hide excess likes on a message
 
 ## Refactor:
@@ -20,6 +20,6 @@ Play Cards Against Humanity over the internet!
 - [ ] "card card" option (extra random white card)
 - [x] Rotate czar option
 - [ ] End game option? Display stats?
-- [ ] Spectate the round if joining midway
-- [ ] Mobile layout
-- [ ] Reconnect if a user who previously left rejoins?
+- [x] Spectate the round if joining midway
+- [x] Mobile layout
+- [x] Reconnect if a user who previously left rejoins?

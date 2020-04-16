@@ -79,7 +79,6 @@ def parsePackFile(filename):
       line += 1
 
 parsePackFile("packs.csv")
-parsePackFile("custom.csv")
 
 print(f"Parsed {str(len(blackCards))} black cards and {str(len(whiteCards))} white cards!")
 
