@@ -15,7 +15,14 @@ import {BlackCard, Card, CardState} from "./struct/cards";
 import {con} from "./db";
 
 // A selection of Font Awesome icons suitable for profile pictures
-const Icons: Array<string> = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider", "holly-berry"];
+const Icons: Array<string> = [
+  "apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish",
+  "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw",
+  "pepper-hot", "pizza-slice", "spider", "holly-berry", "bat", "deer", "duck", "elephant", "monkey", "narwhal",
+  "pegasus", "pig", "rabbit", "sheep", "squirrel", "turtle", "unicorn", "whale", "salad", "pumpkin", "wheat", "burrito",
+  "cheese-swiss", "croissant", "drumstick", "egg-fried", "french-fries", "gingerbread-man", "hat-chef", "meat", "pie",
+  "popcorn", "sausage", "steak", "taco", "turkey"
+];
 
 // Contains the same packs as the database, but this is quicker to access for validation
 const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA", "DISNEY" ];
