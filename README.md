@@ -16,6 +16,8 @@ Play Cards Against Humanity over the internet!
  - [x] Only store sockets in user object
 
 ## Features:
+- [ ] Pick 2 Prompt Cards
+- [ ] Draw 2 Prompt Cards
 - [x] Swap out entire hand
 - [ ] "card card" option (extra random white card)
 - [x] Rotate czar option
@@ -23,3 +25,5 @@ Play Cards Against Humanity over the internet!
 - [x] Spectate the round if joining midway
 - [x] Mobile layout
 - [x] Reconnect if a user who previously left rejoins?
+- [ ] Pretty-print blanks on black cards to match original formatting
+- [ ] Custom decks (cardscast?)

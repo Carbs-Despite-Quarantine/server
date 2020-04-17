@@ -14,6 +14,10 @@ export function validateBoolean(boolean: any) {
   return typeof boolean === "boolean";
 }
 
+export function validateObject(object: any) {
+  return typeof object === "object";
+}
+
 export function validateString(string: any) {
   return typeof string === "string" && string.length > 0;
 }

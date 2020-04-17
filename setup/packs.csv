@@ -1001,7 +1001,7 @@ Prompt,Give me ten good men and 48 hours. I'll get you ______.,
 Prompt,"Goldfinger!
 He's the man,
 the man with _______.",
-Prompt,"Goodbye, ______, hello _____!",PICK 2
+Prompt,"Goodbye, ______, hello ______!",PICK 2
 Prompt,Here's a little something I learned in business school: The customer is always ______.,
 Prompt,"Hey, honey.
 For the bedroom, were you thinking, ""Robin's Egg Blue"" or ______Pink?""",
@@ -1814,10 +1814,10 @@ Response,The royal afterbirth.,
 Response,"The shittier, Jewish version of Christmas.",
 Response,"These low, low prices!",
 Set,2014 Holiday Pack,2014-HOL
-Prompt,"A curse upon thee! Many years from now, just when you think you're safe, ______ shall turn into ______.",
+Prompt,"A curse upon thee! Many years from now, just when you think you're safe, ______ shall turn into ______.",PICK 2
 Prompt,"Behold the Four Horsemen of the Apocalypse! War, Famine, Death, and ______.",
 Prompt,"Dear Mom and Dad, Camp is fun. I like capture the flag. Yesterday, one of the older kids taught me about ______. I love you, Casey",
-Prompt,"Here lies First Last, Year-2015, devoted friend, lover of ______.",PICK 2
+Prompt,"Here lies First Last, Year-2015, devoted friend, lover of ______.",
 Prompt,"Honey, Mommy and Daddy love you very much. But apparently Mommy loves ______ more than she loves Daddy.",
 Prompt,Today on Buzzfeed: 10 pictures of ______ That look like ______!,PICK 2
 Prompt,Why am I so tired?,
@@ -1881,7 +1881,7 @@ Response,The Y2K bug.,
 Response,Wearing Nicolas Cage's face.,
 Response,"Yelling ""girl power!"" and doing a high kick.",
 Set,Geek Pack,GEEK
-Prompt,______ is way better in ______ mode.,
+Prompt,______ is way better in ______ mode.,PICK 2
 Prompt,______: Achievement unlocked.,
 Prompt,"(Heavy breathing) Luke, I am ______.",
 Prompt,Press ↓ ↓ ← → B to unleash ______.,
@@ -2311,7 +2311,7 @@ Prompt,"For a time, Ariel thought ______ was for ______.",PICK 2
 Prompt,"For your safety, remain seated with your seat belts fastened, keeping ______ inside the bobsled.",
 Prompt,"Genie, for my final wish, I wish for ______.",
 Prompt,"Hakuna Matata, what a wonderful phrase. It means no ______ for the rest of your days.",
-Prompt,How typical. ______ exits into ______.,
+Prompt,How typical. ______ exits into ______.,PICK 2
 Prompt,"I can show you the world, shining, shimmering, ______.",
 Prompt,I just can't wait to be ______!,
 Prompt,"I mean, it's crazy how we finish each other's ______.",

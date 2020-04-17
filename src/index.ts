@@ -12,12 +12,13 @@ const io = sio(http, {origins: '*:*'});
 import {RoomUser, User, UserState} from "./struct/users";
 import {Message, Room, RoomState} from "./struct/rooms";
 import {BlackCard, Card, CardState} from "./struct/cards";
+import {con} from "./db";
 
 // A selection of Font Awesome icons suitable for profile pictures
 const Icons: Array<string> = ["apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish", "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw", "pepper-hot", "pizza-slice", "spider", "holly-berry"];
 
 // Contains the same packs as the database, but this is quicker to access for validation
-const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA" ];
+const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA", "DISNEY" ];
 
 // The number of white cards in a standard CAH hand
 const HandSize: number = 7;
@@ -229,17 +230,20 @@ function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, R
 function finishJoinRoom(user: User, response: { [key: string]: any }, fn: (...args: any[]) => void): void {
   if (response.room.state === RoomState.readingCards) {
     db.con.query(`
-          SELECT rwc.card_id AS id, rwc.response_position as position, wc.text FROM room_white_cards as rwc
-          LEFT JOIN white_cards AS wc ON rwc.card_id = wc.id
+          SELECT rwc.card_id AS id, wc.text, rwc.submission_group AS group, rwc.submission_num AS num, rwc.state
+          FROM room_white_cards rwc
+          LEFT JOIN white_cards wc ON rwc.card_id = wc.id
           WHERE (state = ${CardState.selected} OR state = ${CardState.revealed}) AND room_id = ?;
         `, [response.room.id], (err, results) => {
       if (err) console.warn("Failed to fetch revealed cards for newly joined user #" + user.id + " in room #" + response.room.id + ":" , err);
       else {
-        response.revealedResponses = {};
-        response.responsesCount = results.length;
+        response.responseGroups = {};
 
         results.forEach((result: any) => {
-          if (result.position != null) response.revealedResponses[result.position] = new Card(result.id, result.text);
+          if (!response.responseGroups.hasOwnProperty(result.group)) response.responseGroups[result.group] = {};
+          let responseCard: boolean | Card = false;
+          if (result.state === CardState.revealed) responseCard = new Card(result.id, result.text);
+          response.responseGroups[result.group][result.num] = responseCard;
         });
       }
       fn(response);
@@ -340,25 +344,6 @@ function continueJoinRoom(user: User, room: Room, promptCard: BlackCard | undefi
   });
 }
 
-function finishSelectResponse(user: RoomUser, roomUsers: Record<number, RoomUser>, cardId: number | undefined, fn: (...args: any[]) => void): void {
-  db.con.query(`UPDATE rooms SET selected_response = ? WHERE id = ?;`, [cardId, user.roomId], (err) => {
-    if (err) {
-      console.warn("Failed to update selected card for room #" + user.roomId);
-      return fn({error: "MySQL Error"});
-    }
-
-    for (const roomUserId in roomUsers) {
-      let roomUser = roomUsers[roomUserId];
-      if (roomUser.state === UserState.inactive || roomUser.id === user.id) continue;
-
-      let socket = getSocket(roomUser.id);
-      if (!socket) continue;
-
-      socket.emit("selectResponse", {cardId: cardId});
-    }
-  });
-}
-
 function nextRound(roomId: number, czarId: number | undefined, roomUsers: Record<number, RoomUser>, fn: (...args: any[]) => void): void {
   // Get a black card for the new round
   db.getBlackCard(roomId, (err, blackCard) => {
@@ -371,7 +356,7 @@ function nextRound(roomId: number, czarId: number | undefined, roomUsers: Record
     if (czarId) db.setUserState(czarId, UserState.czar);
 
     db.con.query(`
-      UPDATE room_white_cards SET state = ${CardState.played}, response_position = NULL
+      UPDATE room_white_cards SET state = ${CardState.played}, submission_group = NULL, submission_num = NULL
       WHERE room_id = ? AND NOT state = ${CardState.hand} AND NOT state = ${CardState.played};
     `, [roomId], (err) => {
       if (err) {
@@ -656,7 +641,7 @@ function initSocket(socket: sio.Socket, userId: number) {
           if (err || !msg) console.warn("Failed to create leave msg for user #" + user.id + ":", err);
           // Delete the room once all users have left
           if (countActiveUsersOnLeave(userId, roomUsers, msg) === 0) deleteRoom(user.roomId, roomUsers);
-          else if (user.state === UserState.czar || user.state === UserState.winner) {
+          else if (user.state === UserState.czar || user.state === UserState.winnerAndNextCzar || user.state === UserState.nextCzar) {
             // If the czar or winner leaves, we need to start a new round
             replaceCzar(user, roomUsers);
           }
@@ -775,8 +760,12 @@ function initSocket(socket: sio.Socket, userId: number) {
    * Game Logic *
    **************/
 
-  socket.on("submitCard", (data, fn) => {
-    if (!helpers.validateUInt(data.cardId)) return fn({error: "Invalid Card ID"});
+  socket.on("submitCards", (data, fn) => {
+    let cards = data.cards;
+
+    if (!helpers.validateObject(cards)) return fn({error: "Invalid Card Object"});
+
+    const cardsLen = Object.keys(cards).length;
 
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
@@ -786,81 +775,92 @@ function initSocket(socket: sio.Socket, userId: number) {
         return fn({error: "Invalid State"});
       }
 
-      db.getRoomUsers(user.roomId, (err, roomUsers) => {
-        if (err || !roomUsers) {
-          console.warn("Failed to get users when submitting card in room #" + user.roomId);
+      db.con.query(`
+        SELECT pick
+        FROM black_cards
+        WHERE id IN (
+          SELECT cur_prompt
+          FROM rooms
+          WHERE id = ?
+        )
+      `, [user.roomId], (err, results) => {
+        if (err) {
+          console.warn("Failed to get pick value for cur prompt in room #" + user.roomId + " when submitting " + cardsLen + " cards:", err);
           return fn({error: "MySQL Error"});
-        }
+        } else if (results.length === 0) return fn({error: "Invalid Prompt"});
+        else if (results[0].pick !== cardsLen) return fn({error: "Incorrect number of cards"});
 
-        db.con.query(`
-          SELECT card_id FROM room_white_cards
-          WHERE room_id = ? AND user_id = ? AND state = ${CardState.hand};
-        `, [user.roomId, userId], (err, results) => {
-          if (err) {
-            console.warn("Failed to check hand for user #" + userId + ":", err);
+        db.getRoomUsers(user.roomId, (err, roomUsers) => {
+          if (err || !roomUsers) {
+            console.warn("Failed to get users when submitting card in room #" + user.roomId);
             return fn({error: "MySQL Error"});
           }
 
-          let foundSelectedCard = false;
-
-          for (const result in results) {
-            if (results[result].card_id === data.cardId) {
-              foundSelectedCard = true;
-              break;
+          db.con.query(`
+            SELECT card_id AS cardId FROM room_white_cards
+            WHERE room_id = ? AND user_id = ? AND state = ${CardState.hand};
+          `, [user.roomId, userId], (err, results) => {
+            if (err) {
+              console.warn("Failed to check hand for user #" + userId + ":", err);
+              return fn({error: "MySQL Error"});
             }
-          }
 
-          if (!foundSelectedCard) {
-            console.warn("User #" + userId + " tried to submit card #" + data.cardId + " which they didn't own!");
-            return fn({error: "Invalid Card"});
-          }
+            let handIds = results.map((result: any) => result.cardId);
 
-          db.setCardState(CardState.selected, user.roomId, data.cardId, userId, CardState.hand, (err) => {
-            if (err) return fn({error: err});
-
-            // Try to get a new white card to replace the one which was submitted
-            db.getWhiteCards(user.roomId, userId, 1, (err, newCard) => {
-              if (err || !newCard) {
-                console.warn("Failed to get new card for user #" + userId + ":", err);
-                fn({});
-              } else fn({newCard: newCard[parseInt(Object.keys(newCard)[0])]}); // TODO: this is a serious mess..
-
-              db.setUserState(userId, UserState.idle);
-
-              let czarSocket: sio.Socket | undefined = undefined;
-              let maxResponses = 0;
-
-              // Check if all users have submitted a card
-              for (const roomUserId in roomUsers) {
-                let roomUser = roomUsers[roomUserId];
-                if (roomUser.state === UserState.inactive) continue;
-
-                let socket = getSocket(roomUser.id);
-                if (!socket) continue;
-
-
-                if (roomUser.state === UserState.czar) {
-                  if (czarSocket) console.warn("Multiple czars were found in room #" + user.roomId + "!");
-                  czarSocket = socket;
-                } else if (roomUser.name && roomUser.icon) {
-                  maxResponses++;
-                }
-
-                if (roomUser.id !== userId) {
-                  socket.emit("userState", {userId: userId, state: UserState.idle});
-                }
+            for (const pos in cards) {
+              if (!handIds.includes(cards[pos])) {
+                console.warn("User #" + userId + " tried to submit card #" + cards[pos] + " which they didn't own!");
+                return fn({error: "Invalid Card"});
               }
+            }
 
-              db.countSubmittedCards(user.roomId, (err, count) => {
-                if (err || count === undefined) return;
+            db.submitCards(user, cards, (err) => {
+              if (err) return fn({error: err});
 
-                if (!czarSocket) {
-                  return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
+              // Try to get a new white card to replace the one which was submitted
+              db.getWhiteCards(user.roomId, userId, cardsLen, (err, newCards) => {
+                if (err || !newCards) {
+                  console.warn("Failed to get new card for user #" + userId + ":", err);
+                  fn({});
+                } else fn({newCards: newCards});
+
+                db.setUserState(userId, UserState.idle);
+
+                let czarSocket: sio.Socket | undefined = undefined;
+                let maxResponses = 0;
+
+                // Check if all users have submitted a card
+                for (const roomUserId in roomUsers) {
+                  let roomUser = roomUsers[roomUserId];
+                  if (roomUser.state === UserState.inactive) continue;
+
+                  let socket = getSocket(roomUser.id);
+                  if (!socket) continue;
+
+
+                  if (roomUser.state === UserState.czar) {
+                    if (czarSocket) console.warn("Multiple czars were found in room #" + user.roomId + "!");
+                    czarSocket = socket;
+                  } else if (roomUser.name && roomUser.icon) {
+                    maxResponses++;
+                  }
+
+                  if (roomUser.id !== userId) {
+                    socket.emit("userState", {userId: userId, state: UserState.idle});
+                  }
                 }
 
-                czarSocket.emit("answersReady", {
-                  count: count,
-                  maxResponses: maxResponses
+                db.countSubmittedCards(user.roomId, (err, count) => {
+                  if (err || count === undefined) return;
+
+                  if (!czarSocket) {
+                    return console.warn(`No czar was found for room #${user.roomId}, but answers are ready`);
+                  }
+
+                  czarSocket.emit("answersReady", {
+                    count: count,
+                    maxResponses: maxResponses
+                  });
                 });
               });
             });
@@ -948,23 +948,8 @@ function initSocket(socket: sio.Socket, userId: number) {
             return fn({error: err});
           }
 
-          db.con.query(`
-            SELECT id
-            FROM white_cards
-            WHERE id IN (
-              SELECT card_id
-              FROM room_white_cards
-              WHERE room_id = ? AND state = ${CardState.selected}                
-            );
-          `, [user.roomId], (err, results) => {
-            if (err) {
-              console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
-              return fn({error: "MySQL Error"});
-            } else if (results.length < 2) {
-              return fn({error: "Not enough cards selected!"});
-            }
-
-            let submissions = results.length;
+          db.groupAnswers(user.roomId, (err, groups) => {
+            if (err || !groups) return fn({error: err});
 
             // Mark all users who were still choosing as idle
             db.con.query(`
@@ -988,7 +973,7 @@ function initSocket(socket: sio.Socket, userId: number) {
                 if (!socket) continue;
 
                 socket.emit("startReadingAnswers", {
-                  count: submissions
+                  groups: groups
                 });
               }
             });
@@ -999,7 +984,8 @@ function initSocket(socket: sio.Socket, userId: number) {
   });
 
   socket.on("revealResponse", (data, fn) => {
-    if (!helpers.validateUInt(data.position)) return fn({error: "Invalid Card Position"});
+    if (!helpers.validateUInt(data.group)) return fn({error: "Invalid Card Group"});
+    if (!helpers.validateUInt(data.num)) return fn({error: "Invalid Card Number"});
 
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
@@ -1025,11 +1011,9 @@ function initSocket(socket: sio.Socket, userId: number) {
             WHERE id IN (
               SELECT card_id
               FROM room_white_cards
-              WHERE room_id = ? AND state = ${CardState.selected}                
+              WHERE room_id = ? AND state = ${CardState.selected} AND submission_group = ? AND submission_num = ?              
             )
-            ORDER BY RAND()
-            LIMIT 1;
-          `, [user.roomId], (err, results) => {
+          `, [user.roomId, data.group, data.num], (err, results) => {
             if (err) {
               console.warn("Failed to get selected cards for room #" + user.roomId + ":", err);
               return fn({error: "MySQL Error"});
@@ -1044,9 +1028,9 @@ function initSocket(socket: sio.Socket, userId: number) {
 
             db.con.query(`
               UPDATE room_white_cards 
-              SET state = ${CardState.revealed}, response_position = ? 
-              WHERE card_id = ? AND room_id = ?;
-             `, [data.position, card.id, user.roomId], (err) => {
+              SET state = ${CardState.revealed}
+              WHERE card_id = ? AND room_id = ? AND submission_group = ? AND submission_num = ?;
+             `, [card.id, user.roomId, data.group, data.num], (err) => {
               if (err) {
                 console.warn("Failed to mark card as read:", err);
                 return fn({error: "MySQL Error"});
@@ -1060,7 +1044,8 @@ function initSocket(socket: sio.Socket, userId: number) {
                 if (!socket) continue;
 
                 socket.emit("revealResponse", {
-                  position: data.position,
+                  group: data.group,
+                  num: data.num,
                   card: card
                 });
               }
@@ -1071,8 +1056,8 @@ function initSocket(socket: sio.Socket, userId: number) {
     });
   });
 
-  socket.on("selectResponse", (data, fn) => {
-    if (data.cardId != null && !helpers.validateUInt(data.cardId)) return fn({error: "Card ID must be an int"});
+  socket.on("selectResponseGroup", (data, fn) => {
+    if (data.group != null && !helpers.validateUInt(data.group)) return fn({error: "Card ID must be an int"});
 
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
@@ -1092,13 +1077,22 @@ function initSocket(socket: sio.Socket, userId: number) {
             return fn({error: err});
           }
 
-          if (data.cardId != null) {
-            db.getWhiteCardByID(data.cardId, (err, card) => {
-              if (err || !card) return fn({error: err});
+          db.con.query(`UPDATE rooms SET selected_response = ? WHERE id = ?;`, [data.group, user.roomId], (err) => {
+            if (err) {
+              console.warn("Failed to update selected card for room #" + user.roomId);
+              return fn({error: "MySQL Error"});
+            }
 
-              finishSelectResponse(user, roomUsers, data.cardId, fn);
-            });
-          } else finishSelectResponse(user, roomUsers, undefined, fn);
+            for (const roomUserId in roomUsers) {
+              let roomUser = roomUsers[roomUserId];
+              if (roomUser.state === UserState.inactive) continue;
+
+              let socket = getSocket(roomUser.id);
+              if (!socket) continue;
+
+              socket.emit("selectResponseGroup", {group: data.group});
+            }
+          });
         });
       });
     });
@@ -1106,7 +1100,7 @@ function initSocket(socket: sio.Socket, userId: number) {
 
   // TODO: deduplication
   socket.on("selectWinner", (data, fn) => {
-    if (!helpers.validateUInt(data.cardId)) return fn({error: "Invalid Card ID"});
+    if (!helpers.validateUInt(data.group)) return fn({error: "Invalid Group"});
 
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn(user);
@@ -1125,124 +1119,121 @@ function initSocket(socket: sio.Socket, userId: number) {
             return fn({error: err});
           }
 
-          db.getWhiteCardByID(data.cardId, (err, winningCard) => {
-            if (err || !winningCard) {
-              console.warn(`Failed to lookup winning card from room #${user.roomId} with id #${data.cardId}`);
-              return fn({error: "Invalid Card"});
+          db.con.query(`
+            SELECT rwc.card_id AS id, wc.text, rwc.user_id AS userId, rwc.submission_num as num
+            FROM room_white_cards rwc
+            LEFT JOIN white_cards wc ON rwc.card_id = wc.id 
+            WHERE room_id = ? AND (state = ${CardState.revealed} OR state = ${CardState.selected}) AND submission_group = ?
+            ORDER BY submission_num;
+          `, [user.roomId, data.group], (err, results) => {
+            if (err) {
+              console.warn("Failed to check room_white_cards for winning card:", err);
+              return fn({error: "MySQL Error"});
+            } else if (results.length === 0) {
+              return fn({error: "Invalid Room or State"});
             }
 
+            const winnerId = results[0].userId;
+
+            if (roomUsers[winnerId].state === UserState.inactive) {
+              // Start a new round with a different czar if the winner is inactive
+              fn({});
+              return replaceCzar(roomUsers[winnerId], roomUsers);
+            }
+
+            let winningCards: Record<number, Card> = {};
+            results.forEach((result: any) => {
+              winningCards[result.num] = new Card(result.id, result.text);
+            });
+
+            // Mark all revealed cards that didn't win as played
             db.con.query(`
-              SELECT card_id AS cardId, user_id AS userId
-              FROM room_white_cards
-              WHERE room_id = ? AND state = ${CardState.revealed}
-            `, [user.roomId], (err, results) => {
+              UPDATE room_white_cards 
+              SET state = ${CardState.played}, submission_group = NULL, submission_num = NULL
+              WHERE room_id = ? AND (state = ${CardState.revealed} OR state = ${CardState.selected}) AND NOT submission_group = ?;
+            `, [user.roomId, data.group], (err) => {
               if (err) {
-                console.warn("Failed to check room_white_cards for winning card:", err);
+                console.warn("Failed to mark cards as played:", err);
                 return fn({error: "MySQL Error"});
-              } else if (results.length === 0) {
-                return fn({error: "Invalid Room or State"});
               }
 
-              let winnerId: number | undefined = undefined;
-
-              results.forEach((result: any) => {
-                if (result.cardId === data.cardId) {
-                  winnerId = result.userId;
-                }
-              });
-
-              if (!winnerId) {
-                console.warn("Winning card was not found in room_white_cards!");
-                return fn({error: "Invalid Card"});
-              } else if (roomUsers[winnerId].state === UserState.inactive) {
-                // Start a new round with a different czar if the winner is inactive
-                fn({});
-                return replaceCzar(roomUsers[winnerId], roomUsers);
-              }
-
-              // Mark all revealed cards that didn't win as played
               db.con.query(`
                 UPDATE room_white_cards 
-                SET state = ${CardState.played}, response_position = NULL
-                WHERE room_id = ? AND state = ${CardState.revealed} AND NOT card_id = ?;
-              `, [user.roomId, data.cardId], (err) => {
-                if (err) {
-                  console.warn("Failed to mark cards as played:", err);
-                  return fn({error: "MySQL Error"});
+                SET state = ${CardState.winner}
+                WHERE room_id = ? AND (state = ${CardState.revealed} OR state = ${CardState.selected}) AND submission_group = ?;
+              `, [user.roomId, data.group], (err) => {
+                if (err) console.warn("Failed to mark winning cards in room #" + user.roomId + ":", err);
+              });
+
+              let nextCzarId = winnerId;
+
+              // TODO: This is not exactly an efficient way to find the next czar
+              if (room.rotateCzar) {
+                let foundNextCzar = false;
+                let passedCzar = false;
+
+                // Find the next active user after the czar
+                for (const roomUserId in roomUsers) {
+                  let roomUser = roomUsers[roomUserId];
+                  if (roomUser.state === UserState.czar) passedCzar = true;
+                  else if (passedCzar && roomUser.state !== UserState.inactive) {
+                    foundNextCzar = true;
+                    nextCzarId = roomUser.id;
+                    break;
+                  }
                 }
 
-                db.setCardState(CardState.winner, user.roomId, data.cardId);
-
-                let nextCzarId = winnerId;
-
-                // TODO: This is not exactly an efficient way to find the next czar
-                if (room.rotateCzar) {
-                  let foundNextCzar = false;
-                  let passedCzar = false;
-
-                  // Find the next active user after the czar
+                // If the czar is near/at the end of the user array, start again at the start
+                if (!foundNextCzar) {
                   for (const roomUserId in roomUsers) {
                     let roomUser = roomUsers[roomUserId];
-                    if (roomUser.state === UserState.czar) passedCzar = true;
-                    else if (passedCzar && roomUser.state !== UserState.inactive) {
-                      foundNextCzar = true;
+                    if (roomUser.state !== UserState.inactive && roomUser.state !== UserState.czar) {
                       nextCzarId = roomUser.id;
+                      foundNextCzar = true;
                       break;
                     }
                   }
-
-                  // If the czar is near/at the end of the user array, start again at the start
-                  if (!foundNextCzar) {
-                    for (const roomUserId in roomUsers) {
-                      let roomUser = roomUsers[roomUserId];
-                      if (roomUser.state !== UserState.inactive && roomUser.state !== UserState.czar) {
-                        nextCzarId = roomUser.id;
-                        foundNextCzar = true;
-                        break;
-                      }
-                    }
-                  }
-
-                  if (!foundNextCzar) {
-                    console.warn("Failed to find a new czar for room with rotate option enabled, defaulting to winner");
-                  }
                 }
 
-                // Mark all active users except the winner as idle
-                db.con.query(`
-                  UPDATE users 
-                  SET state = ${UserState.idle}
-                  WHERE room_id = ? AND NOT id = ? AND NOT id = ? AND NOT state = ${UserState.inactive};
-                `, [user.roomId, winnerId, nextCzarId], (err) => {
-                  if (err) {
-                    console.warn("Failed to mark all users in room #" + user.roomId+ " as idle:", err);
-                    return fn({error: "MySQL Error"});
-                  }
+                if (!foundNextCzar) {
+                  console.warn("Failed to find a new czar for room with rotate option enabled, defaulting to winner");
+                }
+              }
 
-                  let winnerIsNextCzar = nextCzarId === winnerId;
+              // Mark all active users except the winner as idle
+              db.con.query(`
+                UPDATE users 
+                SET state = ${UserState.idle}
+                WHERE room_id = ? AND NOT id = ? AND NOT id = ? AND NOT state = ${UserState.inactive};
+              `, [user.roomId, winnerId, nextCzarId], (err) => {
+                if (err) {
+                  console.warn("Failed to mark all users in room #" + user.roomId+ " as idle:", err);
+                  return fn({error: "MySQL Error"});
+                }
 
-                  // Only use the nextCzar state if the winner and next czar are different
-                  if (!winnerIsNextCzar) db.setUserState(nextCzarId as number, UserState.nextCzar);
+                let winnerIsNextCzar = nextCzarId === winnerId;
 
-                  db.setWinner(winnerId as number, roomUsers[winnerId as number].score + 1, winnerIsNextCzar);
-                  db.setRoomState(user.roomId, RoomState.viewingWinner);
+                // Only use the nextCzar state if the winner and next czar are different
+                if (!winnerIsNextCzar) db.setUserState(nextCzarId as number, UserState.nextCzar);
 
-                  fn({});
+                db.setWinner(winnerId as number, roomUsers[winnerId as number].score + 1, winnerIsNextCzar);
+                db.setRoomState(user.roomId, RoomState.viewingWinner);
 
-                  for (const roomUserId in roomUsers) {
-                    let roomUser = roomUsers[roomUserId];
-                    if (roomUser.state === UserState.inactive) continue;
+                fn({});
 
-                    let socket = getSocket(roomUser.id);
-                    if (!socket) continue;
+                for (const roomUserId in roomUsers) {
+                  let roomUser = roomUsers[roomUserId];
+                  if (roomUser.state === UserState.inactive) continue;
 
-                    socket.emit("selectWinner", {
-                      card: winningCard,
-                      winnerId: winnerId,
-                      nextCzarId: nextCzarId
-                    });
-                  }
-                });
+                  let socket = getSocket(roomUser.id);
+                  if (!socket) continue;
+
+                  socket.emit("selectWinner", {
+                    winningCards: winningCards,
+                    winnerId: winnerId,
+                    nextCzarId: nextCzarId
+                  });
+                }
               });
             });
           })

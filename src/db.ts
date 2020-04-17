@@ -75,7 +75,6 @@ export function setUserState(userId: number, state: UserState): void {
   con.query(`UPDATE users SET state = ? WHERE id = ?;`,
   [state, userId],(err) => {
     if (err) return console.warn("Failed to set state for user #" + userId + ":", err);
-    console.debug("Set state for user #" + userId + " to '" + state + "'");
   });
 }
 
@@ -195,18 +194,22 @@ export function setRoomState(roomId: number, state: RoomState, fn?: (error?: str
 export function countSubmittedCards(roomId: number, fn: (err?: string, count?: number) => void) {
   // Check if we have received enough answers to start reading them
   con.query(`
-      SELECT id
-      FROM white_cards
-      WHERE id IN (
-        SELECT card_id
-        FROM room_white_cards
-        WHERE room_id = ? AND state = ${CardState.selected}                
-      );
+      SELECT user_id AS userId
+      FROM room_white_cards
+      WHERE room_id = ? AND state = ${CardState.selected}                
     `, [roomId], (err, results) => {
     if (err) {
       console.warn(`Failed to get selected cards for room #${roomId}:`, err);
       return fn("MySQL Error");
-    } else return fn(undefined, results.length);
+    }
+
+    // Count the number of unique users who have submitted card(s)
+    let submittedUsers: number[] = [];
+    results.forEach((result: any) => {
+      if (!submittedUsers.includes(result.userId)) submittedUsers.push(result.userId);
+    });
+
+    return fn(undefined, submittedUsers.length);
   });
 }
 
@@ -309,7 +312,7 @@ function getCards(roomId: number, black: boolean, count: number, fn: (error?: st
       SELECT card_id
       FROM room_${color}_cards
       WHERE room_id = ${roomId}
-    )
+    ) ${black ? "AND draw = 0 AND pick < 3" : ""}
     ORDER BY RAND()
     LIMIT ${count};
   `, (err, results) => {
@@ -383,15 +386,68 @@ export function getWhiteCardByID(id: number, fn: (error?: string, card?: Card) =
   });
 }
 
-export function setCardState(state: CardState, roomId: number, cardId: number, userId?: number, oldState?: CardState, fn?: (err?: string) => void): void {
+export function setCardState(state: CardState, roomId: number, cardId: number, userId?: number, oldState?: CardState, submitNum?: number, fn?: (err?: string) => void): void {
   con.query(`
     UPDATE room_white_cards 
-    SET state = ${state} 
+    SET state = ${state}, submission_num = ?
     WHERE room_id = ? AND card_id = ? ${userId ? ("AND user_id = " + userId) : ""} ${oldState ? ("AND state = " + oldState) : ""};
-  `,  [roomId, cardId], (err) => {
+  `,  [submitNum || 0, roomId, cardId], (err) => {
     if (err) {
       console.warn("Failed to set card #" + cardId + " to state #" + state + ":", err);
       if (fn) return fn("MySQL Error");
     } else if (fn) return fn();
+  });
+}
+
+function submitCardsRecursive(user: RoomUser, cards: {[pos: string]: number}, cardNum: number, fn: (err?: string) => void): void {
+  setCardState(CardState.selected, user.roomId, cards[cardNum], user.id, CardState.hand, cardNum, (err) => {
+    if (err) return fn(err);
+
+    if (cardNum + 1 < Object.keys(cards).length) {
+      submitCardsRecursive(user, cards, cardNum + 1, fn);
+    } else fn();
+  });
+}
+
+export function submitCards(user: RoomUser, cards: {[pos: string]: number}, fn: (err?: string) => void): void {
+  submitCardsRecursive(user, cards, 0, fn);
+}
+
+function groupAnswersRecursive(roomId: number, submittedUsers: number[], group: number, fn: (err?: string, groups?: number) => void): void {
+  const submissionUser = submittedUsers[group];
+  con.query(`
+    UPDATE room_white_cards
+    SET submission_group = ${group}
+    WHERE room_id = ${roomId} AND state = ${CardState.selected} AND user_id = ${submissionUser};
+  `, (err) => {
+    if (err) {
+      console.warn("Failed to set group for submission #" + group + " in room #" + roomId + ":", err);
+      fn("MySQL Error");
+    }
+    if (group + 1 < submittedUsers.length) groupAnswersRecursive(roomId, submittedUsers, group + 1, fn);
+    else fn(undefined, submittedUsers.length);
+  });
+}
+
+export function groupAnswers(roomId: number, fn: (err?: string, groups?: number) => void): void {
+  con.query(`
+    SELECT user_id AS userId, card_id AS cardId
+    FROM room_white_cards
+    WHERE room_id = ? AND state = ${CardState.selected}
+    ORDER BY RAND();
+  `, [roomId], (err, results) => {
+    if (err) {
+      console.warn("Failed to get selected cards for room #" + roomId + ":", err);
+      return fn("MySQL Error");
+    }
+
+    let submittedUsers: number[] = [];
+    results.forEach((result: any) => {
+      if (!submittedUsers.includes(result.userId)) submittedUsers.push(result.userId);
+    });
+
+    if (submittedUsers.length < 2) return fn("Not enough cards submitted!");
+
+    groupAnswersRecursive(roomId, submittedUsers, 0, fn);
   });
 }
