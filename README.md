@@ -16,7 +16,7 @@ Play Cards Against Humanity over the internet!
  - [x] Only store sockets in user object
 
 ## Features:
-- [ ] Pick 2 Prompt Cards
+- [x] Pick 2 Prompt Cards
 - [ ] Draw 2 Prompt Cards
 - [x] Swap out entire hand
 - [ ] "card card" option (extra random white card)

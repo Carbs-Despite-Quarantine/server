@@ -230,11 +230,12 @@ function finishEnterRoom(user: RoomUser, room: Room, roomUsers: Record<number, R
 function finishJoinRoom(user: User, response: { [key: string]: any }, fn: (...args: any[]) => void): void {
   if (response.room.state === RoomState.readingCards) {
     db.con.query(`
-          SELECT rwc.card_id AS id, wc.text, rwc.submission_group AS group, rwc.submission_num AS num, rwc.state
-          FROM room_white_cards rwc
-          LEFT JOIN white_cards wc ON rwc.card_id = wc.id
-          WHERE (state = ${CardState.selected} OR state = ${CardState.revealed}) AND room_id = ?;
-        `, [response.room.id], (err, results) => {
+      SELECT rwc.card_id AS id, wc.text, rwc.submission_group AS 'group', rwc.submission_num AS num, rwc.state
+      FROM room_white_cards rwc
+      LEFT JOIN white_cards wc ON rwc.card_id = wc.id
+      WHERE (state = ${CardState.selected} OR state = ${CardState.revealed}) AND room_id = ?
+      ORDER BY submission_group;
+    `, [response.room.id], (err, results) => {
       if (err) console.warn("Failed to fetch revealed cards for newly joined user #" + user.id + " in room #" + response.room.id + ":" , err);
       else {
         response.responseGroups = {};
@@ -250,14 +251,19 @@ function finishJoinRoom(user: User, response: { [key: string]: any }, fn: (...ar
     });
   } else if (response.room.state === RoomState.viewingWinner) {
     db.con.query(`
-          SELECT id, text FROM white_cards
-          WHERE id in (
-            SELECT card_id FROM room_white_cards
-            WHERE room_id = ? AND state = ${CardState.winner}
-          );
-        `, [response.room.id], (err, results) => {
+      SELECT rwc.card_id AS id, wc.text, rwc.submission_num as num
+      FROM room_white_cards rwc
+      LEFT JOIN white_cards wc ON rwc.card_id = wc.id
+      WHERE room_id = ? AND state = ${CardState.winner}
+      ORDER BY submission_num;
+    `, [response.room.id], (err, results) => {
       if (err) console.warn("Failed to get winning card text for newly joined user #" + user.id + " in room #" + response.room.id + ":", err);
-      else if (results.length > 0) response.winningCard = new Card(results[0].id, results[0].text);
+      else if (results.length > 0) {
+        response.winningCards = {};
+        results.forEach((result: any) => {
+          response.winningCards[result.num] = new Card(result.id, result.text);
+        });
+      }
       fn(response);
     });
   } else fn(response);
@@ -1304,8 +1310,6 @@ function initSocket(socket: sio.Socket, userId: number) {
    * Chat System *
    ***************/
 
-  // TODO: room owner cannot send messages or likes
-
   socket.on("chatMessage", (data, fn) => {
     if (!helpers.validateString(data.content)) return fn({error: "Invalid Message"});
 
@@ -1315,7 +1319,6 @@ function initSocket(socket: sio.Socket, userId: number) {
       db.createMessage(userId, data.content, false, (err, msg) => {
         if (err || !msg) return fn({error: err});
         fn({message: msg});
-
 
         broadcastMessage(msg, user.roomId, userId);
       });
