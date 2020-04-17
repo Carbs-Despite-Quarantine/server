@@ -309,7 +309,7 @@ function getCards(roomId: number, black: boolean, count: number, fn: (error?: st
       SELECT card_id
       FROM room_${color}_cards
       WHERE room_id = ${roomId}
-    ) ${black ? "AND pick = 1" : ""}
+    )
     ORDER BY RAND()
     LIMIT ${count};
   `, (err, results) => {
@@ -326,7 +326,7 @@ export function getBlackCard(roomId: number, fn: (error?: string, card?: BlackCa
     if (err || !cards) return fn(err);
 
     let card = cards[0];
-    fn(undefined, new BlackCard(card.id, card.text, card.draw, card.text));
+    fn(undefined, new BlackCard(card.id, card.text, card.draw, card.pick));
 
     con.query(`
       INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)
