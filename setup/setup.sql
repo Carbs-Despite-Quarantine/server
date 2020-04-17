@@ -130,8 +130,8 @@ CREATE TABLE room_white_cards (
 	card_id INT NOT NULL,
 	user_id INT,
 	state TINYINT NOT NULL DEFAULT 1,
-	submission_position TINYINT,
-	response_position TINYINT,
+	submission_group TINYINT,
+	submission_num TINYINT,
 	PRIMARY KEY (room_id, card_id),
 	FOREIGN KEY (room_id)
 		REFERENCES rooms (id)
