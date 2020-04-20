@@ -12,7 +12,6 @@ const io = sio(http, {origins: '*:*'});
 import {RoomUser, User, UserState} from "./struct/users";
 import {Message, Room, RoomState} from "./struct/rooms";
 import {BlackCard, Card, CardState} from "./struct/cards";
-import {con} from "./db";
 
 // A selection of Font Awesome icons suitable for profile pictures
 const Icons: Array<string> = [
@@ -25,7 +24,9 @@ const Icons: Array<string> = [
 ];
 
 // Contains the same packs as the database, but this is quicker to access for validation
-const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD", "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED", "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA", "DISNEY" ];
+const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD",
+  "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED",
+  "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA", "DISNEY" ];
 
 // The number of white cards in a standard CAH hand
 const HandSize: number = 7;
@@ -1472,6 +1473,5 @@ function setupNewUser(socket: sio.Socket) {
  **************/
 
 const server = http.listen(process.env.PORT || 3000, () => {
-  console.log("Hello!!");
   console.log("Listening on port %d.", server.address().port);
 });

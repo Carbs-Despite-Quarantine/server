@@ -1,9 +1,11 @@
 FROM mhart/alpine-node:12 AS build
 WORKDIR /srv
+
 ADD package.json .
 RUN npm install
-CMD ["npm", "run tsc"]
+
 ADD . .
+RUN npm run tsc
 
 FROM mhart/alpine-node:slim-12
 COPY --from=build /srv .

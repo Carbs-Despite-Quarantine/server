@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  nodejs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: caq-server
+    container_name: caq-server
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MYSQL_HOST=$MYSQL_HOST
+      - MYSQL_USER=$MYSQL_USER
+      - MYSQL_PASS=$MYSQL_PASS
+      - MYSQL_DB=$MYSQL_DB
+    ports:
+      - "3000:3000"

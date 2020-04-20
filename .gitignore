@@ -3,3 +3,5 @@ build/
 
 generated.sql
 setup/packs.js
+
+.env
