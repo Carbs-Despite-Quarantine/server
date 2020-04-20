@@ -1472,5 +1472,6 @@ function setupNewUser(socket: sio.Socket) {
  **************/
 
 const server = http.listen(process.env.PORT || 3000, () => {
+  console.log("Hello!!");
   console.log("Listening on port %d.", server.address().port);
 });

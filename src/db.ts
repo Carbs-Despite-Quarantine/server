@@ -8,8 +8,10 @@ import {Card, BlackCard, CardState} from "./struct/cards";
  * Connection *
  **************/
 
+console.debug("Connecting to database...");
+
 export const con = mysql.createConnection({
-  host: process.env.MYSQL_HOST || "localhost",
+  host: process.env.MYSQL_HOST || "192.168.0.220",
   user: process.env.MYSQL_USER || "cah-online",
   password: process.env.MYSQL_PASS || "password",
   database: process.env.MYSQL_DB || "cah-online"
