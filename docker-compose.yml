@@ -1,12 +1,28 @@
 version: "3"
 
+networks:
+  caq:
+
 services:
-  nodejs:
+  redis:
+    image: "redis:alpine"
+    command: /etc/redis/redis.conf
+    networks:
+      - caq
+    volumes:
+      - ./dev/redis.conf:/etc/redis/redis.conf:ro
+    ports:
+      - 6379
+
+  caq-node:
     build:
       context: .
       dockerfile: Dockerfile
     image: caq-server
-    container_name: caq-server
+    networks:
+      - caq
+    depends_on:
+      - redis
     restart: unless-stopped
     env_file: .env
     environment:
@@ -14,5 +30,16 @@ services:
       - MYSQL_USER=$MYSQL_USER
       - MYSQL_PASS=$MYSQL_PASS
       - MYSQL_DB=$MYSQL_DB
+      - REDIS_HOST=redis
+    expose:
+      - "3000"
+  nginx:
+    image: nginx:latest
+    networks:
+      - caq
+    volumes:
+      - ./dev/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - caq-node
     ports:
       - "3000:3000"
