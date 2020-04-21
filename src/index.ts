@@ -35,7 +35,8 @@ const HandSize: number = 7;
 // Setup redis adaptor
 io.adapter(redis({
   host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379
+  port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT) : 6379,
+  auth_pass: process.env.REDIS_PASS
 }));
 
 /*****************
