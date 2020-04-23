@@ -118,6 +118,7 @@ export function getRoom(roomId: number, fn: (err?: string, room?: Room) => void)
       token, 
       admin_token AS adminToken,
       edition, 
+      open,
       flared_user AS flaredUser,
       rotate_czar AS rotateCzar, 
       cur_prompt AS curPrompt, 
@@ -133,8 +134,8 @@ export function getRoom(roomId: number, fn: (err?: string, room?: Room) => void)
       return fn("Invalid Room ID");
     }
     fn(undefined, new Room(
-      roomId, results[0].token, results[0].adminToken,
-      results[0].state, results[0].flaredUser, results[0].edition,
+      roomId, results[0].token, results[0].adminToken, results[0].state,
+      results[0].flaredUser, results[0].edition, results[0].open,
       results[0].rotateCzar, results[0].curPrompt, results[0].selectedResponse)
     );
   });
@@ -210,6 +211,74 @@ export function countSubmittedCards(roomId: number, fn: (err?: string, count?: n
     });
 
     return fn(undefined, submittedUsers.length);
+  });
+}
+
+export function addPacks(roomId: number, packs: string[], fn: (err?: string, validPacks?: string[]) => void): void {
+  let packsSQL: string[] = [];
+  let validPacks: string[] = [];
+
+  if (packs.length > 0) {
+    packs.forEach((packId: string) => {
+      if (helpers.Packs.includes(packId)) {
+        validPacks.push(packId);
+        packsSQL.push(`(${roomId}, '${packId}')`);
+      }
+    });
+
+    let sql = `INSERT INTO room_packs (room_id, pack_id) VALUES `;
+    con.query( sql + packsSQL.join(", ") + ";", (err) => {
+      if (err) {
+        console.warn("Failed to add packs to room #" + roomId + ":", err);
+        return fn("MySQL Error");
+      }
+      fn(undefined, validPacks);
+    });
+  } fn(undefined, []);
+}
+
+// Create a new room with a random edition and a random selection of packs
+// However, the room will always be open and rotateCzar will be disabled
+export function createRandomRoom(fn: (err?: string, id?: number, token?: string) => void) {
+  let token = helpers.makeHash(8);
+  let adminToken = helpers.makeHash(8);
+  con.query(`
+    INSERT INTO rooms (
+      token, admin_token, open,
+      edition, rotate_czar, state
+    ) VALUES (
+      ?, ?, TRUE,
+      (
+        SELECT id FROM editions
+        ORDER BY RAND()
+        LIMIT 1
+      ), 
+      0, ${RoomState.choosingCards}
+    );
+  `, [token, adminToken], (err, result) => {
+    if (err) {
+      console.warn("Failed to create open room for immediate join:", err);
+      return fn("MySQL Error");
+    }
+    let roomId = result.insertId;
+
+    getBlackCard(roomId, (err, blackCard) => {
+      if (err) {
+        console.warn("Failed to set prompt for new open room #" + roomId + ":", err);
+        return fn("MySQL Error");
+      }
+
+      let packs: string[] = [];
+      helpers.Packs.forEach((pack) => {
+        if (Math.random() > 0.5) packs.push(pack);
+      });
+
+      // We don't particularly care if this fails, but we need to wait for it to
+      // finish so that future methods run on the room will use the correct packs
+      addPacks(roomId, packs, () => {
+        fn(undefined, roomId, token);
+      });
+    });
   });
 }
 
@@ -329,7 +398,6 @@ export function getBlackCard(roomId: number, fn: (error?: string, card?: BlackCa
     if (err || !cards) return fn(err);
 
     let card = cards[0];
-    fn(undefined, new BlackCard(card.id, card.text, card.draw, card.pick));
 
     con.query(`
       INSERT INTO room_black_cards (card_id, room_id) VALUES (?, ?)
@@ -344,6 +412,8 @@ export function getBlackCard(roomId: number, fn: (error?: string, card?: BlackCa
       UPDATE rooms SET cur_prompt = ? WHERE id = ?
     `, [card.id, roomId], (err) => {
       if (err) return console.warn("Failed to update prompt for room #" + roomId + ":", err);
+
+      fn(undefined, new BlackCard(card.id, card.text, card.draw, card.pick));
     });
   });
 }

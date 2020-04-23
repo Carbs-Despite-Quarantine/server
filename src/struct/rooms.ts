@@ -14,14 +14,15 @@ export class Room {
 
   edition: string | undefined;
   rotateCzar: boolean | undefined;
+  open: boolean | undefined;
   curPrompt: number | undefined;
   selectedResponse: number | undefined;
 
   messages: Record<number, Message> = {};
 
-  constructor(id: number, token: string, adminToken?: string,
-              state?: RoomState, flaredUser?: number, edition?: string,
-              rotateCzar?: boolean, curPrompt?: number, selectedResponse?: number) {
+  constructor(id: number, token: string, adminToken?: string, state?: RoomState,
+              flaredUser?: number, edition?: string, rotateCzar?: boolean,
+              open?: boolean, curPrompt?: number, selectedResponse?: number) {
     this.id = id;
     this.token = token;
     this.adminToken = adminToken;
@@ -30,6 +31,7 @@ export class Room {
     if (state && state != RoomState.new) {
       this.state = state;
       this.edition = edition;
+      this.open = open;
       this.rotateCzar = rotateCzar;
       this.curPrompt = curPrompt;
       this.selectedResponse = selectedResponse;

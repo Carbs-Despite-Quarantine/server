@@ -13,21 +13,7 @@ const io = sio(http, {origins: '*:*'});
 import {RoomUser, User, UserState} from "./struct/users";
 import {Message, Room, RoomState} from "./struct/rooms";
 import {BlackCard, Card, CardState} from "./struct/cards";
-
-// A selection of Font Awesome icons suitable for profile pictures
-const Icons: Array<string> = [
-  "apple-alt",  "candy-cane", "carrot", "cat", "cheese", "cookie", "crow", "dog", "dove", "dragon", "egg", "fish",
-  "frog", "hamburger", "hippo", "horse", "hotdog", "ice-cream", "kiwi-bird", "leaf", "lemon", "otter", "paw",
-  "pepper-hot", "pizza-slice", "spider", "holly-berry", "bat", "deer", "duck", "elephant", "monkey", "narwhal",
-  "pig", "rabbit", "sheep", "squirrel", "turtle", "whale", "salad", "pumpkin", "wheat", "burrito", "cheese-swiss",
-  "croissant", "drumstick", "egg-fried", "french-fries", "gingerbread-man", "hat-chef", "meat", "pie", "popcorn",
-  "sausage", "steak", "taco", "turkey"
-];
-
-// Contains the same packs as the database, but this is quicker to access for validation
-const Packs: Array<string> = [ "RED", "BLUE", "GREEN", "ABSURD", "BOX", "PROC", "RETAIL", "FANTASY", "PERIOD",
-  "COLLEGE", "ASS", "2012-HOL", "2013-HOL", "2014-HOL", "90s", "GEEK", "SCIFI", "WWW", "SCIENCE", "FOOD", "WEED",
-  "TRUMP", "DAD", "PRIDE", "THEATRE", "2000s", "HIDDEN", "JEW", "CORONA", "DISNEY" ];
+import {addPacks} from "./db";
 
 // The number of white cards in a standard CAH hand
 const HandSize: number = 7;
@@ -56,7 +42,7 @@ app.get("/status", (req, res) => {
 function getAvailableIcons(roomIcons: Array<string>) {
   let availableIcons: Array<string> = [];
 
-  Icons.forEach((icon: string) => {
+  helpers.Icons.forEach((icon: string) => {
     // Add all the unused icons to the final list
     if (!roomIcons.includes(icon))  availableIcons.push(icon);
   });
@@ -126,57 +112,6 @@ function addUserToRoom(socket: sio.Socket, userId: number, roomId: number, state
 /********************
  * Socket Responses *
  ********************/
-
-function finishSetupRoom(userId: number, roomId: number, roomUsers: Record<number, RoomUser>,
-                         rotateCzar: boolean, edition: string, packs: Array<string>, fn: (...args: any[]) => void): void {
-  db.getBlackCard(roomId, (err, blackCard) => {
-    if (err || !blackCard) {
-      console.warn("Failed to get starting black card for room #" + roomId + ":", err);
-      return fn({error: err})
-    }
-
-    console.debug("Setup room #" + roomId + " with edition '" + edition + "'");
-
-    // Get starting white cards
-    db.getWhiteCards(roomId, userId, HandSize, (err, hand) => {
-      if (err || !hand) {
-        console.warn("Failed to get starting hand for room #" + roomId + ":", err);
-        return fn({error: err});
-      }
-      fn({hand: hand, blackCard: blackCard});
-    });
-
-    for (const roomUserId in roomUsers) {
-      let roomUser = roomUsers[roomUserId];
-      if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
-
-      let roomSettings = {
-        edition: edition,
-        packs: packs,
-        rotateCzar: rotateCzar,
-        blackCard: blackCard,
-        hand: {}
-      };
-
-      if (!roomUser.name || !roomUser.icon) {
-        sendToUser(roomUser.id, "roomSettings", roomSettings);
-        continue;
-      }
-
-      db.getWhiteCards(roomId, roomUser.id, HandSize, (err, hand) => {
-        if (err || !hand) {
-          console.warn("Failed to get starting hand for user #" + roomUser.id + ":", err);
-          hand = {};
-        }
-
-        db.setUserState(roomUser.id, UserState.choosing);
-        roomSettings.hand = hand;
-
-        sendToUser(roomUser.id, "roomSettings", roomSettings);
-      });
-    }
-  });
-}
 
 function finishEnterRoom(socket: sio.Socket, user: RoomUser, room: Room, roomUsers: Record<number, RoomUser>,
                          hand: Record<number, Card>, fn: (...args: any[]) => void): void {
@@ -399,11 +334,11 @@ function nextRound(roomId: number, czarId: number | undefined, fn: (...args: any
   });
 }
 
-function leaveRoom(userId: number, permanent = false) {
+function leaveRoom(userId: number, permanent: boolean) {
   db.getRoomUser(userId, (err, user) => {
     // Delete the user if they weren't in a room
     if (err || !user) {
-      if (permanent) return db.deleteUser(userId);
+      if (permanent) db.deleteUser(userId);
       return;
     }
 
@@ -446,6 +381,7 @@ function leaveRoom(userId: number, permanent = false) {
                     if (roomUser.state !== UserState.czar) continue;
 
                     sendToUser(roomUser.id, "answersNotReady");
+                    break;
                   }
                 }
               });
@@ -482,14 +418,14 @@ function initSocket(socket: sio.Socket, userId: number) {
    *****************/
 
   socket.on("getAvailableIcons", (data, fn) => {
-    fn({icons: Icons});
+    fn({icons: helpers.Icons});
   });
 
   socket.on("setIcon", (data, fn) => {
     db.getUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
 
-      if (!Icons.includes(data.icon)) return fn({error: "Invalid Icon"});
+      if (!helpers.Icons.includes(data.icon)) return fn({error: "Invalid Icon"});
 
       if (user instanceof RoomUser) {
         db.getRoomUsers(user.roomId, (err, roomUsers) => {
@@ -611,35 +547,9 @@ function initSocket(socket: sio.Socket, userId: number) {
           console.warn("Failed to select random open room:", err);
           return fn({error: "MySQL Error"});
         } else if (results.length === 0) {
-          let token = helpers.makeHash(8);
-          let adminToken = helpers.makeHash(8);
-          db.con.query(`
-            INSERT INTO rooms (
-              token, admin_token, open,
-              edition, rotate_czar, state
-            ) VALUES (
-              ?, ?, TRUE,
-              (
-                SELECT id FROM editions
-                ORDER BY RAND()
-                LIMIT 1
-              ), 
-              0, ${RoomState.choosingCards}
-            );
-          `, [token, adminToken], (err, result) => {
-            if (err) {
-              console.warn("Failed to create open room for immediate join:", err);
-              return fn({error: "MySQL Error"});
-            }
-            let roomId = result.insertId;
-            db.getBlackCard(roomId, (err, blackCard) => {
-              if (err) {
-                console.warn("Failed to set prompt for new open room #" + roomId + ":", err);
-                return fn({error: "MySQL Error"});
-              }
-
-              joinRoom(socket, user, roomId, token, fn);
-            });
+          db.createRandomRoom((err, roomId, token) => {
+            if (err || !roomId || !token) return console.warn("Failed to create random room:", err);
+            joinRoom(socket, user, roomId, token, fn);
           });
         } else {
           // Join the randomly selected room if one was found
@@ -721,10 +631,12 @@ function initSocket(socket: sio.Socket, userId: number) {
             }
 
             let rotateCzar = data.rotateCzar === true;
+            let open = data.open === true;
 
-            db.con.query(`UPDATE rooms SET edition = ?, rotate_czar = ?, state = ? WHERE id = ?;`, [
+            db.con.query(`UPDATE rooms SET edition = ?, rotate_czar = ?, open = ?, state = ? WHERE id = ?;`, [
               data.edition,
               rotateCzar,
+              open,
               RoomState.choosingCards,
               user.roomId
             ], (err) => {
@@ -733,23 +645,60 @@ function initSocket(socket: sio.Socket, userId: number) {
                 return fn({error: "MySQL Error"});
               }
 
-              let packsSQL: string[] = [];
-              let validPacks: string[] = [];
+              db.addPacks(user.roomId, data.packs, (err, validPacks) => {
+                if (err || !validPacks) {
+                  console.warn("Failed to add packs to room #" + user.roomId + ":", err);
+                }
 
-              if (data.packs.length > 0) {
-                data.packs.forEach((packId: string) => {
-                  if (Packs.includes(packId)) {
-                    validPacks.push(packId);
-                    packsSQL.push(`(${user.roomId}, '${packId}')`);
+                db.getBlackCard(user.roomId, (err, blackCard) => {
+                  if (err || !blackCard) {
+                    console.warn("Failed to get starting black card for room #" + user.roomId + ":", err);
+                    return fn({error: err})
+                  }
+
+                  console.debug("Setup room #" + user.roomId + " with edition '" + data.edition + "'");
+
+                  // Get starting white cards
+                  db.getWhiteCards(user.roomId, userId, HandSize, (err, hand) => {
+                    if (err || !hand) {
+                      console.warn("Failed to get starting hand for room #" + user.roomId + ":", err);
+                      return fn({error: err});
+                    }
+                    fn({hand: hand, blackCard: blackCard});
+                  });
+
+                  for (const roomUserId in roomUsers) {
+                    let roomUser = roomUsers[roomUserId];
+                    if (roomUser.state === UserState.inactive || roomUser.id === userId) continue;
+
+                    let roomSettings = {
+                      edition: data.edition,
+                      packs: validPacks,
+                      rotateCzar: rotateCzar,
+                      open: open,
+                      blackCard: blackCard,
+                      hand: {}
+                    };
+
+                    if (!roomUser.name || !roomUser.icon) {
+                      sendToUser(roomUser.id, "roomSettings", roomSettings);
+                      continue;
+                    }
+
+                    db.getWhiteCards(user.roomId, roomUser.id, HandSize, (err, hand) => {
+                      if (err || !hand) {
+                        console.warn("Failed to get starting hand for user #" + roomUser.id + ":", err);
+                        hand = {};
+                      }
+
+                      db.setUserState(roomUser.id, UserState.choosing);
+                      roomSettings.hand = hand;
+
+                      sendToUser(roomUser.id, "roomSettings", roomSettings);
+                    });
                   }
                 });
-
-                let sql = `INSERT INTO room_packs (room_id, pack_id) VALUES `;
-                db.con.query( sql + packsSQL.join(", ") + ";", (err) => {
-                  if (err) console.warn("Failed to add packs to room #" + user.roomId + ":", err);
-                  finishSetupRoom(userId, user.roomId, roomUsers, rotateCzar, data.edition, validPacks, fn);
-                });
-              } else finishSetupRoom(userId, user.roomId, roomUsers, rotateCzar, data.edition, [], fn);
+              });
             });
           });
         });
