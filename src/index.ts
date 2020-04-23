@@ -386,6 +386,10 @@ function initSocket(socket: sio.Socket, userId: number) {
    * Room Handling *
    *****************/
 
+  socket.on("getAvailableIcons", (data, fn) => {
+    fn({icons: Icons});
+  });
+
   socket.on("setIcon", (data, fn) => {
     db.getUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
@@ -1300,8 +1304,7 @@ function setupNewUser(socket: sio.Socket) {
     // Send the generated userId
     socket.emit("init", {
       userId: userId,
-      userToken: userToken,
-      icons: Icons
+      userToken: userToken
     });
 
     // Only register socket callbacks now that we have a userId
