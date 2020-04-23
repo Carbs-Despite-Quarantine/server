@@ -157,7 +157,7 @@ export function getRoomUsers(roomId: number, fn: (error?: string, users?: Record
       console.warn("Failed to get users for room #" + roomId + ":", err);
       return fn("MySQL Error");
     } else if (results.length == 0) {
-      return fn("Invalid Room");
+      return fn(undefined, {});
     }
 
     let users: Record<number, RoomUser> = {};

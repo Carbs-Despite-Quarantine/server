@@ -287,6 +287,7 @@ function continueJoinRoom(socket: sio.Socket, user: User, room: Room, promptCard
       // Match the structure of the client room object
       let clientRoom = {
         id: room.id,
+        token: room.token,
         state: room.state,
         flaredUser: room.flaredUser,
         edition: room.edition,
@@ -334,6 +335,29 @@ function continueJoinRoom(socket: sio.Socket, user: User, room: Room, promptCard
   });
 }
 
+function joinRoom(socket: sio.Socket, user: User, roomId: number, token: string, fn: (...args: any[]) => void, adminToken?: string): void {
+  db.getRoomWithToken(roomId, token, (err, room) => {
+    if (err || !room) return fn({error: err});
+
+    if (adminToken) {
+      if (adminToken !== room.adminToken) {
+        return fn({error: "Invalid Admin Token"});
+      } else {
+        user.admin = true;
+      }
+    }
+
+    if (room.curPrompt) {
+      db.getBlackCardByID(room.curPrompt, (err, promptCard) => {
+        if (err || !promptCard) {
+          console.warn("Received invalid prompt card for room #" + roomId + ":", err);
+          continueJoinRoom(socket, user, room, undefined, fn);
+        } else continueJoinRoom(socket, user, room, promptCard, fn);
+      });
+    } else continueJoinRoom(socket, user, room, undefined, fn);
+  });
+}
+
 function nextRound(roomId: number, czarId: number | undefined, fn: (...args: any[]) => void): void {
   // Get a black card for the new round
   db.getBlackCard(roomId, (err, blackCard) => {
@@ -370,6 +394,77 @@ function nextRound(roomId: number, czarId: number | undefined, fn: (...args: any
           card: blackCard,
           czar: czarId
         });
+      });
+    });
+  });
+}
+
+function leaveRoom(userId: number, permanent = false) {
+  db.getRoomUser(userId, (err, user) => {
+    // Delete the user if they weren't in a room
+    if (err || !user) {
+      if (permanent) return db.deleteUser(userId);
+      return;
+    }
+
+    if (permanent) db.setUserState(userId, UserState.inactive);
+    else {
+      db.con.query(`
+          UPDATE users
+          SET state = ${UserState.idle}, score = 0, room_id = NULL
+          WHERE id = ?;
+        `, [userId], (err) => {
+        if (err) return console.warn("Failed to reset user #" + userId + ":", err);
+      })
+    }
+
+    db.getRoomUsers(user.roomId, (err, roomUsers) => {
+      if (err || !roomUsers) return console.warn("Failed to get user list when leaving room #" + user.roomId);
+
+      // If the user never entered the room, don't inform users of leave
+      if (!user.name) {
+        if (countActiveUsersOnLeave(userId, roomUsers) === 0) db.deleteRoom(user.roomId);
+        else if (permanent) db.deleteUser(userId);
+        return;
+      }
+
+      db.getRoom(user.roomId, (err, room) => {
+        if (err || !room) return;
+
+        // Only remove submitted cards if the room is still in the choosing phase
+        if (room.state === RoomState.choosingCards) {
+          db.con.query(`
+              DELETE FROM room_white_cards WHERE user_id = ? AND state = ${CardState.selected}
+            `, [userId], (err, results) => {
+            if (err) return console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
+            else if (results.affectedRows > 0) {
+              db.countSubmittedCards(user.roomId, (err, count) => {
+                if (err || count === undefined) return;
+                if (count < 2) {
+                  for (const roomUserId in roomUsers) {
+                    let roomUser = roomUsers[roomUserId];
+                    if (roomUser.state !== UserState.czar) continue;
+
+                    sendToUser(roomUser.id, "answersNotReady");
+                  }
+                }
+              });
+            }
+          });
+        }
+      });
+
+      db.createMessage(userId, "left the room", true, (err, msg) => {
+        if (err || !msg) console.warn("Failed to create leave msg for user #" + user.id + ":", err);
+        // Delete the room once all users have left
+        if (countActiveUsersOnLeave(userId, roomUsers) === 0) db.deleteRoom(user.roomId);
+        else {
+          sendToRoom(user.roomId, "userLeft", {userId: userId, message: msg});
+          if (user.state === UserState.czar || user.state === UserState.winnerAndNextCzar || user.state === UserState.nextCzar) {
+            // If the czar or winner leaves, we need to start a new round
+            replaceCzar(user, roomUsers);
+          }
+        }
       });
     });
   });
@@ -496,26 +591,60 @@ function initSocket(socket: sio.Socket, userId: number) {
   socket.on("joinRoom", (data, fn) => {
     db.getUser(userId, (err, user) => {
       if (err || !user) return fn({error: err});
+      joinRoom(socket, user, data.roomId, data.token, fn, data.adminToken);
+    });
+  });
 
-      db.getRoomWithToken(data.roomId, data.token, (err, room) => {
-        if (err || !room) return fn({error: err});
+  socket.on("joinOpenRoom", (data, fn) => {
+    db.getUser(userId, (err, user) => {
+      if (err || !user) return fn({error: err});
+      db.con.query(`
+        SELECT id, token FROM rooms
+        WHERE open = TRUE AND id IN (
+          SELECT room_id FROM users
+          WHERE NOT state = ${UserState.inactive}
+        )
+        ORDER BY RAND()
+        LIMIT 1;
+      `, (err, results) => {
+        if (err) {
+          console.warn("Failed to select random open room:", err);
+          return fn({error: "MySQL Error"});
+        } else if (results.length === 0) {
+          let token = helpers.makeHash(8);
+          let adminToken = helpers.makeHash(8);
+          db.con.query(`
+            INSERT INTO rooms (
+              token, admin_token, open,
+              edition, rotate_czar, state
+            ) VALUES (
+              ?, ?, TRUE,
+              (
+                SELECT id FROM editions
+                ORDER BY RAND()
+                LIMIT 1
+              ), 
+              0, ${RoomState.choosingCards}
+            );
+          `, [token, adminToken], (err, result) => {
+            if (err) {
+              console.warn("Failed to create open room for immediate join:", err);
+              return fn({error: "MySQL Error"});
+            }
+            let roomId = result.insertId;
+            db.getBlackCard(roomId, (err, blackCard) => {
+              if (err) {
+                console.warn("Failed to set prompt for new open room #" + roomId + ":", err);
+                return fn({error: "MySQL Error"});
+              }
 
-        if (data.adminToken) {
-          if (data.adminToken !== room.adminToken) {
-            return fn({error: "Invalid Admin Token"});
-          } else {
-            user.admin = true;
-          }
-        }
-
-        if (room.curPrompt) {
-          db.getBlackCardByID(room.curPrompt, (err, promptCard) => {
-            if (err || !promptCard) {
-              console.warn("Received invalid prompt card for room #" + data.roomId + ":", err);
-              continueJoinRoom(socket, user, room, undefined, fn);
-            } else continueJoinRoom(socket, user, room, promptCard, fn);
+              joinRoom(socket, user, roomId, token, fn);
+            });
           });
-        } else continueJoinRoom(socket, user, room, undefined, fn);
+        } else {
+          // Join the randomly selected room if one was found
+          joinRoom(socket, user, results[0].id, results[0].token, fn);
+        }
       });
     });
   });
@@ -560,63 +689,12 @@ function initSocket(socket: sio.Socket, userId: number) {
     });
   });
 
+  socket.on("leaveRoom", () => {
+    leaveRoom(userId, false);
+  });
+
   socket.on("userLeft", () => {
-    db.getRoomUser(userId, (err, user) => {
-      // Delete the user if they weren't in a room
-      if (err || !user) return db.deleteUser(userId);
-
-      db.setUserState(userId, UserState.inactive);
-
-      db.getRoomUsers(user.roomId, (err, roomUsers) => {
-        if (err || !roomUsers) return console.warn("Failed to get user list when leaving room #" + user.roomId);
-
-        // If the user never entered the room, don't inform users of leave
-        if (!user.name) {
-          if (countActiveUsersOnLeave(userId, roomUsers) === 0) db.deleteRoom(user.roomId);
-          else db.deleteUser(userId);
-          return;
-        }
-
-        db.getRoom(user.roomId, (err, room) => {
-          if (err || !room) return;
-
-          // Only remove submitted cards if the room is still in the choosing phase
-          if (room.state === RoomState.choosingCards) {
-            db.con.query(`
-              DELETE FROM room_white_cards WHERE user_id = ? AND state = ${CardState.selected}
-            `, [userId], (err, results) => {
-              if (err) return console.warn("Failed to remove clear cards from user #" + userId + " after they left!");
-              else if (results.affectedRows > 0) {
-                db.countSubmittedCards(user.roomId, (err, count) => {
-                  if (err || count === undefined) return;
-                  if (count < 2) {
-                    for (const roomUserId in roomUsers) {
-                      let roomUser = roomUsers[roomUserId];
-                      if (roomUser.state !== UserState.czar) continue;
-
-                      sendToUser(roomUser.id, "answersNotReady");
-                    }
-                  }
-                });
-              }
-            });
-          }
-        });
-
-        db.createMessage(userId, "left the room", true, (err, msg) => {
-          if (err || !msg) console.warn("Failed to create leave msg for user #" + user.id + ":", err);
-          // Delete the room once all users have left
-          if (countActiveUsersOnLeave(userId, roomUsers) === 0) db.deleteRoom(user.roomId);
-          else {
-            sendToRoom(user.roomId, "userLeft", {userId: userId, message: msg});
-            if (user.state === UserState.czar || user.state === UserState.winnerAndNextCzar || user.state === UserState.nextCzar) {
-              // If the czar or winner leaves, we need to start a new round
-              replaceCzar(user, roomUsers);
-            }
-          }
-        });
-      });
-    });
+    leaveRoom(userId, true);
   });
 
   socket.on("roomSettings", (data, fn) => {
