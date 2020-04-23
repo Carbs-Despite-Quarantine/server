@@ -234,7 +234,7 @@ export function addPacks(roomId: number, packs: string[], fn: (err?: string, val
       }
       fn(undefined, validPacks);
     });
-  } fn(undefined, []);
+  } else fn(undefined, []);
 }
 
 // Create a new room with a random edition and a random selection of packs
