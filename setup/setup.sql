@@ -138,3 +138,14 @@ CREATE TABLE room_white_cards (
 		REFERENCES rooms (id)
 		ON DELETE CASCADE
 );
+
+CREATE VIEW open_rooms
+AS SELECT id, token, last_active, edition from rooms
+WHERE open = TRUE AND NOT state = 1
+ORDER BY last_active DESC, id DESC
+LIMIT 30;
+
+CREATE VIEW open_room_users
+AS SELECT id, score, room_id, state
+FROM users
+WHERE room_id IN (SELECT id FROM open_rooms) AND name IS NOT NULL;

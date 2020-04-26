@@ -422,25 +422,26 @@ function initSocket(socket: sio.Socket, userId: number) {
   });
 
   socket.on("getOpenRooms", (data, fn) => {
-    // TODO: this is very slow (2+ secs)
     db.con.query(`
       SELECT 
-        rooms.id,
-        rooms.token,
+        open_rooms.id,
+        open_rooms.token,
         editions.name AS edition,
         COUNT(DISTINCT room_packs.pack_id) AS packs,
         COUNT(DISTINCT all_users.id) AS players,
         COUNT(DISTINCT inactive_users.id) AS inactivePlayers,
-        UNIX_TIMESTAMP(rooms.last_active) AS lastActive
-      FROM rooms
-      LEFT JOIN editions ON rooms.edition = editions.id
-      LEFT JOIN room_packs ON rooms.id = room_packs.room_id
-      LEFT JOIN users all_users ON rooms.id = all_users.room_id
-      LEFT JOIN users inactive_users ON rooms.id = inactive_users.room_id AND inactive_users.state = 7
-      WHERE rooms.open = TRUE AND NOT rooms.state = 1
-      GROUP BY rooms.id
-      ORDER BY rooms.last_active DESC, rooms.id DESC
-      LIMIT 30;
+        UNIX_TIMESTAMP(open_rooms.last_active) AS lastActive
+      FROM open_rooms
+      LEFT JOIN editions ON open_rooms.edition = editions.id
+      LEFT JOIN room_packs ON open_rooms.id = room_packs.room_id
+      LEFT JOIN open_room_users AS all_users ON open_rooms.id = all_users.room_id
+      LEFT JOIN (
+        SELECT id, score, room_id
+        FROM open_room_users
+        WHERE state = ${UserState.inactive}
+      ) AS inactive_users ON open_rooms.id = inactive_users.room_id
+      GROUP BY open_rooms.id
+      ORDER BY open_rooms.last_active DESC, open_rooms.id DESC;
     `, (err, results) => {
       if (err) {
         console.warn("Failed to get open rooms:", err);
