@@ -422,28 +422,47 @@ function initSocket(socket: sio.Socket, userId: number) {
   });
 
   socket.on("getOpenRooms", (data, fn) => {
+    // TODO: this is very slow (2+ secs)
     db.con.query(`
       SELECT 
         rooms.id,
+        rooms.token,
         editions.name AS edition,
-        COUNT(DISTINCT u.id) AS players,
-        rooms.last_active
+        COUNT(DISTINCT room_packs.pack_id) AS packs,
+        COUNT(DISTINCT all_users.id) AS players,
+        COUNT(DISTINCT inactive_users.id) AS inactivePlayers,
+        UNIX_TIMESTAMP(rooms.last_active) AS lastActive
       FROM rooms
       LEFT JOIN editions ON rooms.edition = editions.id
-      LEFT JOIN (
-        SELECT DISTINCT
-          users.id,
-          users.room_id,
-          users.score
-        FROM users
-        GROUP BY users.id
-      ) AS u ON rooms.id = u.room_id
+      LEFT JOIN room_packs ON rooms.id = room_packs.room_id
+      LEFT JOIN users all_users ON rooms.id = all_users.room_id
+      LEFT JOIN users inactive_users ON rooms.id = inactive_users.room_id AND inactive_users.state = 7
       WHERE rooms.open = TRUE AND NOT rooms.state = 1
       GROUP BY rooms.id
-      ORDER BY rooms.last_active DESC
+      ORDER BY rooms.last_active DESC, rooms.id DESC
       LIMIT 30;
     `, (err, results) => {
-      // TODO
+      if (err) {
+        console.warn("Failed to get open rooms:", err);
+        return fn({error: "MySQL Error"});
+      }
+
+      let openRooms: any[] = [];
+      const now = Date.now() / 1000;
+
+      results.forEach((result: any) => {
+        openRooms.push({
+          id: result.id,
+          token: result.token,
+          edition: result.edition,
+          packs: result.packs,
+          players: result.players,
+          inactivePlayers: result.inactivePlayers,
+          lastActive: now - result.lastActive
+        });
+      });
+
+      fn({openRooms: openRooms});
     });
   });
 

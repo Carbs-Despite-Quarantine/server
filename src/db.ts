@@ -20,32 +20,6 @@ con.connect((err: mysql.MysqlError) => {
   console.log("Connected to the MySQL Database!");
 });
 
-function updateTimestamps() {
-  con.query(`
-    SELECT id FROM rooms;
-  `, (err, rooms) => {
-    if (err) return console.warn("Failed to get rooms for migration");
-    rooms.forEach((room: any) => {
-      con.query(`
-        SELECT sent_at from messages
-        WHERE room_id = ?
-        ORDER BY sent_at
-        LIMIT 1;
-      `, [room.id], (err, message) => {
-        if (err || message.length === 0) return console.warn("Failed to get latest message for room #" + room.id + ":", err);
-
-        con.query(`
-          UPDATE rooms
-          SET last_active = ?
-          WHERE id = ?;
-        `, [message.sent_at, room.id], (err) => {
-          if (err) console.warn("Failed to set last active time for room #" + room.id + ":", err);
-        });
-      });
-    });
-  });
-}
-
 /*********
  * Users *
  *********/
@@ -348,7 +322,7 @@ export function createMessage(roomId: number, userId: number, content: any, isSy
   con.query(`
     INSERT INTO messages (room_id, user_id, content, system_msg) 
     VALUES (?, ?, ?, ?);
-  `, [roomId, userId, userId, content, isSystemMsg], (err, result) => {
+  `, [roomId, userId, content, isSystemMsg], (err, result) => {
     if (err) {
       console.warn("Failed to create message:", err);
       return fn("MySQL Error");
