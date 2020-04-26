@@ -20,6 +20,32 @@ con.connect((err: mysql.MysqlError) => {
   console.log("Connected to the MySQL Database!");
 });
 
+function updateTimestamps() {
+  con.query(`
+    SELECT id FROM rooms;
+  `, (err, rooms) => {
+    if (err) return console.warn("Failed to get rooms for migration");
+    rooms.forEach((room: any) => {
+      con.query(`
+        SELECT sent_at from messages
+        WHERE room_id = ?
+        ORDER BY sent_at
+        LIMIT 1;
+      `, [room.id], (err, message) => {
+        if (err || message.length === 0) return console.warn("Failed to get latest message for room #" + room.id + ":", err);
+
+        con.query(`
+          UPDATE rooms
+          SET last_active = ?
+          WHERE id = ?;
+        `, [message.sent_at, room.id], (err) => {
+          if (err) console.warn("Failed to set last active time for room #" + room.id + ":", err);
+        });
+      });
+    });
+  });
+}
+
 /*********
  * Users *
  *********/
@@ -189,6 +215,7 @@ export function setRoomState(roomId: number, state: RoomState, fn?: (error?: str
     }
     console.debug("Set state for room #" + roomId + " to '" + state + "'");
     if (fn) fn();
+    updateRoom(roomId);
   });
 }
 
@@ -314,22 +341,32 @@ export function getLatestMessages(roomId: number, limit: number, fn: (err?: stri
   });  
 }
 
-export function createMessage(userId: number, content: any, isSystemMsg: boolean, fn: (error?: string, message?: Message) => void): void {
+export function createMessage(roomId: number, userId: number, content: any, isSystemMsg: boolean, fn: (error?: string, message?: Message) => void): void {
   if (!helpers.validateString(content)) return fn("Invalid Message");
   content = helpers.stripHTML(content);
 
   con.query(`
     INSERT INTO messages (room_id, user_id, content, system_msg) 
-    VALUES ((SELECT room_id FROM users WHERE id = ?), ?, ?, ?);
-  `, [userId, userId, content, isSystemMsg], (err, result) => {
+    VALUES (?, ?, ?, ?);
+  `, [roomId, userId, userId, content, isSystemMsg], (err, result) => {
     if (err) {
       console.warn("Failed to create message:", err);
       return fn("MySQL Error");
     }
     let msgId = result.insertId;
 
-    // Create an object to represent the message on the client
     fn(undefined, new Message(msgId, userId, content, isSystemMsg, []));
+    updateRoom(roomId);
+  });
+}
+
+export function updateRoom(roomId: number) {
+  con.query(`
+    UPDATE rooms
+    SET last_active = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `, [roomId], (err) => {
+    if (err) console.warn("Failed to update last active time for room #" + roomId + ":", roomId);
   });
 }
 

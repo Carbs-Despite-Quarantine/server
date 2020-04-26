@@ -94,7 +94,7 @@ function replaceCzar(oldCzar: RoomUser, roomUsers: Record<number, RoomUser>) {
   nextRound(oldCzar.roomId, newCzarId, (res: any) => {
     if (res.error) return console.warn("Failed to start next round when czar left: ", res.error);
     if (newCzarId) {
-      db.createMessage(newCzarId as number,
+      db.createMessage(oldCzar.roomId, newCzarId as number,
         "took over from " + oldCzar.name + " as the Card Czar", true,
       (err, msg) => {
         if (err || !msg) return console.warn("Failed to broadcast new czar message:", err);
@@ -115,7 +115,7 @@ function addUserToRoom(socket: sio.Socket, userId: number, roomId: number, state
 
 function finishEnterRoom(socket: sio.Socket, user: RoomUser, room: Room, roomUsers: Record<number, RoomUser>,
                          hand: Record<number, Card>, fn: (...args: any[]) => void): void {
-  db.createMessage(user.id, "joined the room", true, (err, message) => {
+  db.createMessage(room.id, user.id, "joined the room", true, (err, message) => {
 
     let hasCzar = false;
 
@@ -390,7 +390,7 @@ function leaveRoom(userId: number, permanent: boolean) {
         }
       });
 
-      db.createMessage(userId, "left the room", true, (err, msg) => {
+      db.createMessage(user.roomId, userId, "left the room", true, (err, msg) => {
         if (err || !msg) console.warn("Failed to create leave msg for user #" + user.id + ":", err);
         // Delete the room once all users have left
         if (countActiveUsersOnLeave(userId, roomUsers) === 0) db.deleteRoom(user.roomId);
@@ -419,6 +419,32 @@ function initSocket(socket: sio.Socket, userId: number) {
 
   socket.on("getAvailableIcons", (data, fn) => {
     fn({icons: helpers.Icons});
+  });
+
+  socket.on("getOpenRooms", (data, fn) => {
+    db.con.query(`
+      SELECT 
+        rooms.id,
+        editions.name AS edition,
+        COUNT(DISTINCT u.id) AS players,
+        rooms.last_active
+      FROM rooms
+      LEFT JOIN editions ON rooms.edition = editions.id
+      LEFT JOIN (
+        SELECT DISTINCT
+          users.id,
+          users.room_id,
+          users.score
+        FROM users
+        GROUP BY users.id
+      ) AS u ON rooms.id = u.room_id
+      WHERE rooms.open = TRUE AND NOT rooms.state = 1
+      GROUP BY rooms.id
+      ORDER BY rooms.last_active DESC
+      LIMIT 30;
+    `, (err, results) => {
+      // TODO
+    });
   });
 
   socket.on("setIcon", (data, fn) => {
@@ -505,7 +531,7 @@ function initSocket(socket: sio.Socket, userId: number) {
               results.forEach((result: any) => packs[result.id] = result.name);
 
               // Wait for the join message to be created before sending a response
-              db.createMessage(userId, "created the room", true, (err, msg) => {
+              db.createMessage(room.id, userId, "created the room", true, (err, msg) => {
                 if (err || !msg) console.warn("Failed to create join message:", err);
                 else room.messages[msg.id] = msg;
 
@@ -889,7 +915,7 @@ function initSocket(socket: sio.Socket, userId: number) {
                 return fn({error: err});
               }
 
-              db.createMessage(userId, "skipped the prompt", true, (err, message) => {
+              db.createMessage(user.roomId, userId, "skipped the prompt", true, (err, message) => {
                 if (err || !message) console.warn("Failed to create 'skipped prompt' message in room #" + user.roomId + ":", err);
 
                 sendToRoom(user.roomId, "skipPrompt", {
@@ -1203,7 +1229,7 @@ function initSocket(socket: sio.Socket, userId: number) {
           db.getWhiteCards(user.roomId, userId, HandSize, (err, cards) => {
             if (err || !cards) return fn({error: err});
 
-            db.createMessage(userId, "recycled their cards", true, (err, message) => {
+            db.createMessage(user.roomId, userId, "recycled their cards", true, (err, message) => {
               if (err || !message) return fn({error: err});
 
               fn({cards: cards, message: message});
@@ -1225,7 +1251,7 @@ function initSocket(socket: sio.Socket, userId: number) {
     db.getRoomUser(userId, (err, user) => {
       if (err || !user) return fn(err);
 
-      db.createMessage(userId, data.content, false, (err, msg) => {
+      db.createMessage(user.roomId, userId, data.content, false, (err, msg) => {
         if (err || !msg) return fn({error: err});
 
         fn({message: msg});
