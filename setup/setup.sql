@@ -62,6 +62,7 @@ CREATE TABLE rooms (
 	token VARCHAR(8) NOT NULL,
 	admin_token VARCHAR(8) NOT NULL,
 	last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	open BOOLEAN DEFAULT FALSE,
 	edition VARCHAR(8),
 	rotate_czar BOOLEAN DEFAULT FALSE,
 	flared_user INT,
