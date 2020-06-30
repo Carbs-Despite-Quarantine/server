@@ -1,6 +1,6 @@
-# Cards Against Quarantine
+# Carbs Despite Quarantine
 
-Play Cards Against Humanity over the internet!
+A [Cards Against Humanity](https://cardsagainsthumanity.com) clone.
 
 ## Bugs:
 
