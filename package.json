@@ -22,7 +22,7 @@
     "@types/mysql": "2.15.9",
     "@types/socket.io": "2.1.4",
     "@types/socket.io-redis": "1.0.25",
-    "express": "4.17.1",
+    "express": "4.18.2",
     "mysql": "2.18.1",
     "socket.io": "2.3.0",
     "socket.io-redis": "5.2.0",
